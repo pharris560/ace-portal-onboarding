@@ -1122,6 +1122,7 @@ async function uploadDocToAirtable(file,fieldId,statusId){
       if(res.ok){
         setDropStatus(s,'success','Uploaded — '+file.name);
         showToast('Document uploaded successfully','success');
+        if(isCitizenship) citizenshipUploaded=true;
         /* Auto-read the expiration date from a citizenship doc, only when the
            stored ID is missing / expired / expiring within 90 days. */
         if(isCitizenship && idExpNeedsRefresh){
@@ -1610,6 +1611,7 @@ function showUpdateForm(){
   set('edit-phone',ff['Student Phone']||'');
   set('edit-grade',(ff['Grade']||{}).name||ff['Grade']||'');
   gradeConfirmed=false; var _gc=document.getElementById('grade-confirm'); if(_gc) _gc.checked=false; var _gcr=document.getElementById('grade-confirm-row'); if(_gcr) _gcr.style.color='#f4b94a';
+  citizenshipUploaded=false;
   set('edit-shirt',(ff['Shirt Size']||{}).name||ff['Shirt Size']||'');
   set('edit-school',ff['School']||'');
   set('edit-id-exp',ff['ID Expiration Date']||'');
@@ -1778,6 +1780,8 @@ async function uploadCitizenshipDoc(recordId,file){
 }
 /* Grade must be actively confirmed each year — the stored grade is usually last year's. */
 var gradeConfirmed=false;
+/* Set true when a proof-of-citizenship doc is uploaded this session (see uploadDocToAirtable). */
+var citizenshipUploaded=false;
 function onGradeChange(){ gradeConfirmed=false; var cb=document.getElementById('grade-confirm'); if(cb) cb.checked=false; var r=document.getElementById('grade-confirm-row'); if(r) r.style.color='#f4b94a'; }
 function onGradeConfirm(cb){ gradeConfirmed=!!(cb&&cb.checked); var r=document.getElementById('grade-confirm-row'); if(r) r.style.color=gradeConfirmed?'#22c55e':'#f4b94a'; }
 /* New/Returning: defaults to 'Returning' on this (returning-student) form; parent must confirm. */
@@ -1839,6 +1843,14 @@ async function saveStudentUpdate(){
     var _gcr2=document.getElementById('grade-confirm-row'); if(_gcr2) _gcr2.style.color='#ef4444';
     errEl.textContent='Please confirm the student’s grade for the 2026–2027 school year (see the Student section).';errEl.classList.remove('hidden');
     var _ge=document.getElementById('edit-grade'); if(_ge) _ge.scrollIntoView({behavior:'smooth',block:'center'});
+    btn.textContent='Submit for Review';btn.disabled=false;return;
+  }
+  var _pff=currentLookupFields||{};
+  var _pdocs=_pff['Documents'];
+  var _proofOnFile=(Array.isArray(_pdocs)&&_pdocs.length>0)||citizenshipUploaded||_pff['Passport']||_pff['Birth Certificate'];
+  if(!_proofOnFile){
+    errEl.textContent='Proof of citizenship is required. Please upload a passport, OR a birth certificate plus a state ID, in the “Upload Updated Documents” section below — then submit.';errEl.classList.remove('hidden');
+    var _uc=document.getElementById('lr-uploads-card'); if(_uc) _uc.scrollIntoView({behavior:'smooth',block:'center'});
     btn.textContent='Submit for Review';btn.disabled=false;return;
   }
   const essayWarn=document.getElementById('essay-required-warn');
