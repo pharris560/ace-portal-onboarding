@@ -565,11 +565,12 @@ tailwind.config = {
           </div></div>
         <div><label class="block text-xs font-medium text-gray-400 mb-1.5 tracking-wide uppercase">Student Phone</label><input type="tel" id="edit-phone" class="neu-input w-full px-4 py-3 rounded-xl text-sm" placeholder="(555) 555-5555"></div>
         <div><label class="block text-xs font-medium text-gray-400 mb-1.5 tracking-wide uppercase">Grade</label>
-          <select id="edit-grade" class="neu-input w-full px-4 py-3 rounded-xl text-sm">
+          <select id="edit-grade" class="neu-input w-full px-4 py-3 rounded-xl text-sm" onchange="onGradeChange()">
             <option value="">Select grade...</option>
             <option>4th</option><option>5th</option><option>6th</option><option>7th</option><option>8th</option>
             <option>9th</option><option>10th</option><option>11th</option><option>12th</option><option>DF Waiver</option>
-          </select></div>
+          </select>
+          <label id="grade-confirm-row" class="flex items-start gap-2 mt-2 text-xs" style="color:#f4b94a"><input type="checkbox" id="grade-confirm" class="mt-0.5" onchange="onGradeConfirm(this)"><span>Grades advance each year &mdash; please confirm this is the student&rsquo;s grade for the 2026&ndash;2027 school year.</span></label></div>
         <div><label class="block text-xs font-medium text-gray-400 mb-1.5 tracking-wide uppercase">Shirt Size</label>
           <select id="edit-shirt" class="neu-input w-full px-4 py-3 rounded-xl text-sm">
             <option value="">Select size...</option>
@@ -1606,6 +1607,7 @@ function showUpdateForm(){
   setEditDob(ff['Birthday']||'');
   set('edit-phone',ff['Student Phone']||'');
   set('edit-grade',(ff['Grade']||{}).name||ff['Grade']||'');
+  gradeConfirmed=false; var _gc=document.getElementById('grade-confirm'); if(_gc) _gc.checked=false; var _gcr=document.getElementById('grade-confirm-row'); if(_gcr) _gcr.style.color='#f4b94a';
   set('edit-shirt',(ff['Shirt Size']||{}).name||ff['Shirt Size']||'');
   set('edit-school',ff['School']||'');
   set('edit-id-exp',ff['ID Expiration Date']||'');
@@ -1772,6 +1774,10 @@ async function uploadCitizenshipDoc(recordId,file){
     reader.readAsDataURL(file);
   });
 }
+/* Grade must be actively confirmed each year — the stored grade is usually last year's. */
+var gradeConfirmed=false;
+function onGradeChange(){ gradeConfirmed=false; var cb=document.getElementById('grade-confirm'); if(cb) cb.checked=false; var r=document.getElementById('grade-confirm-row'); if(r) r.style.color='#f4b94a'; }
+function onGradeConfirm(cb){ gradeConfirmed=!!(cb&&cb.checked); var r=document.getElementById('grade-confirm-row'); if(r) r.style.color=gradeConfirmed?'#22c55e':'#f4b94a'; }
 async function saveStudentUpdate(){
   const btn=document.getElementById('edit-save-btn');
   const errEl=document.getElementById('edit-error');
@@ -1817,6 +1823,12 @@ async function saveStudentUpdate(){
   }
   if(attendWarn)attendWarn.classList.add('hidden');
   fields['Attendance']=attend;
+  if(!gradeConfirmed){
+    var _gcr2=document.getElementById('grade-confirm-row'); if(_gcr2) _gcr2.style.color='#ef4444';
+    errEl.textContent='Please confirm the student’s grade for the 2026–2027 school year (see the Student section).';errEl.classList.remove('hidden');
+    var _ge=document.getElementById('edit-grade'); if(_ge) _ge.scrollIntoView({behavior:'smooth',block:'center'});
+    btn.textContent='Submit for Review';btn.disabled=false;return;
+  }
   const essayWarn=document.getElementById('essay-required-warn');
   if(!g('edit-essay').trim()){
     if(essayWarn)essayWarn.classList.remove('hidden');
