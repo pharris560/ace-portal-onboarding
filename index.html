@@ -687,6 +687,10 @@ tailwind.config = {
       <p id="edit-error" class="text-xs text-red-400 mt-4 hidden"></p>
       <div class="flex flex-col md:flex-row gap-3 mt-6">
         <button onclick="saveStudentUpdate()" class="neu-btn-primary px-8 py-3 rounded-xl text-sm font-display tracking-wide" id="edit-save-btn">Submit for Review</button>
+        <button id="edit-add-child-btn" onclick="if(confirm('Start an application for another child? Please submit this student first — any unsaved changes here will not be kept.'))addAnotherChild()" class="neu-btn px-6 py-3 rounded-xl text-sm font-display tracking-wide neon-text-subtle hidden inline-flex items-center gap-2">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5v14m-7-7h14" stroke-linecap="round"/></svg>
+          Add Another Child
+        </button>
         <button onclick="cancelStudentUpdate()" class="neu-btn px-6 py-3 rounded-xl text-sm text-gray-400 font-display">Cancel</button>
         <button onclick="downloadFormCopy()" class="neu-btn px-6 py-3 rounded-xl text-sm font-display tracking-wide neon-text-subtle flex items-center gap-2">
           <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 16V4m0 12l-4-4m4 4l4-4M4 20h16"/></svg>
@@ -1740,6 +1744,7 @@ function showUpdateForm(createMode){
   var _sub=document.getElementById('edit-card-sub'); if(_sub) _sub.textContent=isCreateMode?'Complete the fields below to apply to the ACE Weekend Academy — your application will be submitted for review.':'Fill in or update the fields below and save — your record will be submitted for review.';
   var _utl=document.getElementById('uploads-card-title'); if(_utl) _utl.textContent=isCreateMode?'Upload Documents':'Upload Updated Documents';
   var _usub=document.getElementById('uploads-card-sub'); if(_usub) _usub.textContent=isCreateMode?'Upload the required documents':'Upload new or updated copies of required documents';
+  var _acb=document.getElementById('edit-add-child-btn'); if(_acb) _acb.classList.toggle('hidden', isCreateMode); /* offer 'Add Another Child' only on the returning/edit form, not while filling out the first application */
   set('edit-first-name',ff['First Name']||'');
   set('edit-middle-name',ff['Middle Name']||'');
   set('edit-last-name',ff['Last Name']||'');
@@ -2129,9 +2134,10 @@ async function submitApplication(e){
     if(get('dob'))record.fields['Birthday']=get('dob');
     record.fields['Address']=get('address');
     if(get('essay'))record.fields['Student Essay']=get('essay');
-    record.fields['Stage']='Incomplete';
-    record.fields['Status']='Active';
-    record.fields['New/Returning']='New Student';
+    /* 'New Student' is not a valid New/Returning option (422); use 'New'. Land as Pending for review
+       (not Active, which would prematurely trigger the billing seam). Stage omitted — option not verified. */
+    record.fields['Status']='Pending';
+    record.fields['New/Returning']='New';
     record.fields['Student Signatures']=true;
     record.fields['Application Completion Date']=new Date().toISOString().split('T')[0];
 
