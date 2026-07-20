@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "scripts": {
     "test:smoke": "playwright test",
-    "test:install": "playwright install chromium"
+    "test:install": "playwright install chromium",
+    "verify:record": "node tests/verify-record.mjs"
   },
   "dependencies": {
     "@netlify/blobs": "*"
