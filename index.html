@@ -1798,20 +1798,19 @@ function showNewApplicantForm(){
   document.getElementById('lr-actions-card').classList.add('hidden');
   document.getElementById('lr-confirm-card').classList.add('hidden');
   document.getElementById('lr-uploads-card').classList.remove('hidden');
-  /* Always open a blank create form (recordId stays null → saveStudentUpdate CREATES a new student). */
   const proceed=()=>{
     showUpdateForm(true);
     const pe=document.getElementById('edit-parent-email');
     if(pe&&!pe.value&&loggedInUser&&loggedInUser.email) pe.value=loggedInUser.email;
   };
   if(loggedInUser&&loggedInUser.email){
+    /* showNewApplicantForm is only ever reached by a NEW APPLICANT account, so a record matching this
+       parent email is THEIR OWN (not a sibling). Load it fully so they see + edit their student info,
+       and set recordId so a re-submit UPDATES that record instead of creating a duplicate. */
     atFetch('/'+AT_BASE_ID+'/'+AT_TABLE_ALL+'?filterByFormula='+encodeURIComponent("LOWER({Primary Parent Email})='"+loggedInUser.email.toLowerCase()+"'")+'&maxRecords=1').then(data=>{
       if(data&&data.records&&data.records.length>0){
-        /* A sibling/existing record shares this parent email — carry ONLY contact + address (never student fields), and keep recordId null so we CREATE a new student rather than overwrite the sibling. */
-        const f=data.records[0].fields||{};
-        const carry={};
-        ['Primary Parent First Name','Primary Parent Last Name','Primary Parent Email','Primary Parent Phone','Secondary Parent First Name','Secondary Parent Last Name','Secondary Parent Phone','Secondary Parent Email','Address','City','County','Zip Code'].forEach(k=>{ if(f[k]!=null&&f[k]!=='') carry[k]=f[k]; });
-        currentLookupFields=carry;
+        currentLookupRecordId=data.records[0].id;
+        currentLookupFields=data.records[0].fields||{};
       }
       setTimeout(proceed,100);
     }).catch(()=>setTimeout(proceed,100));
@@ -2040,6 +2039,13 @@ async function saveStudentUpdate(){
     currentLookupRecordId=enrollRes.id;
     if(pendingCitizenshipFile){ btn.textContent='Uploading document…';btn.disabled=true; await attachFileToRecord(enrollRes.id,pendingCitizenshipFile,AT_FIELD_ATTACHMENTS,'status-lookup-citizenship'); pendingCitizenshipFile=null; }
     if(pendingMedicalFile){ btn.textContent='Uploading document…';btn.disabled=true; await attachFileToRecord(enrollRes.id,pendingMedicalFile,AT_FIELD_MEDICAL,'status-lookup-medical'); pendingMedicalFile=null; }
+  }
+
+  /* A new applicant who has now submitted becomes an Existing Student, so the NEXT login routes to the
+     lookup flow and pre-populates their full student record (name, grade, etc.), not a blank form. */
+  if(enrollRes&&loggedInUser&&loggedInUser.recordId&&loggedInUser.type==='New Applicant'){
+    const _up=await atFetch('/'+AT_BASE_ID+'/'+AT_TABLE_ACCOUNTS+'/'+loggedInUser.recordId,{method:'PATCH',body:JSON.stringify({fields:{'Account Type':'Existing Student'}})});
+    if(_up) loggedInUser.type='Existing Student';
   }
 
   btn.textContent='Submit for Review';btn.disabled=false;
