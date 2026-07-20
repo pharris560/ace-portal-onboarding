@@ -125,7 +125,7 @@ tailwind.config = {
 @keyframes ace-pop{0%{transform:scale(0);opacity:0}60%{transform:scale(1.25)}100%{transform:scale(1);opacity:1}}
 @keyframes ace-shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-3px)}40%,80%{transform:translateX(3px)}}
 /* Big pop-up upload modal */
-#ace-upload-modal{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(4,12,20,.62);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);animation:ace-fade .18s ease}
+#ace-upload-modal{position:fixed;inset:0;z-index:99999;pointer-events:none;display:flex;align-items:center;justify-content:center;background:rgba(4,12,20,.62);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);animation:ace-fade .18s ease}
 #ace-upload-modal.hidden{display:none}
 #ace-upload-modal .ace-mcard{background:#0f2137;border:1px solid rgba(92,194,255,.28);border-radius:18px;padding:30px 40px;text-align:center;box-shadow:0 24px 60px -18px rgba(0,0,0,.75);min-width:250px;max-width:88vw;animation:ace-pop-in .32s cubic-bezier(.2,.8,.2,1)}
 #ace-upload-modal .ace-micon{width:66px;height:66px;margin:0 auto 16px;display:grid;place-items:center}
@@ -558,10 +558,8 @@ tailwind.config = {
         <div><label class="block text-xs font-medium text-gray-400 mb-1.5 tracking-wide uppercase">Gender</label>
           <select id="edit-gender" class="neu-input w-full px-4 py-3 rounded-xl text-sm">
             <option value="">Select...</option>
-            <option>Male</option>
             <option>Female</option>
-            <option>Non-binary</option>
-            <option>Prefer not to say</option>
+            <option>Male</option>
           </select></div>
         <div><label class="block text-xs font-medium text-gray-400 mb-1.5 tracking-wide uppercase">New / Returning <span class="text-red-400">*</span></label>
           <select id="edit-new-returning" class="neu-input w-full px-4 py-3 rounded-xl text-sm" onchange="onNrChange()">
@@ -1136,7 +1134,8 @@ function showUploadModal(state,title,sub){
   document.getElementById('ace-msub').textContent=sub||'';
   m.className='';
   if(state==='success') _aceModalTimer=setTimeout(hideUploadModal,1500);
-  if(state==='error')   _aceModalTimer=setTimeout(hideUploadModal,4500);
+  else if(state==='error')   _aceModalTimer=setTimeout(hideUploadModal,4500);
+  else _aceModalTimer=setTimeout(hideUploadModal,65000); /* uploading/reading backstop so the spinner never lingers */
 }
 function hideUploadModal(){ var m=document.getElementById('ace-upload-modal'); if(m) m.className='hidden'; }
 
@@ -1259,6 +1258,8 @@ function fileSelected(input,docType){
   /* Trigger real Airtable upload for lookup-view drop zones */
   if(docType==='lookup-citizenship') uploadDocToAirtable(input.files[0],AT_FIELD_ATTACHMENTS,'status-lookup-citizenship');
   if(docType==='lookup-medical')     uploadDocToAirtable(input.files[0],AT_FIELD_MEDICAL,'status-lookup-medical');
+  /* Clear the input so the SAME file can be re-picked later and each pick re-fires onchange (File ref already captured above). */
+  try{ input.value=''; }catch(_){}
 }
 function handleDrop(e,t){e.preventDefault();e.currentTarget.classList.remove('dragover');const i=e.currentTarget.querySelector('input[type="file"]');i.files=e.dataTransfer.files;fileSelected(i,t);}
 
@@ -1709,7 +1710,7 @@ function showUpdateForm(createMode){
   set('edit-school',ff['School']||'');
   set('edit-id-exp',ff['ID Expiration Date']||'');
   idExpNeedsRefresh=idNeedsRefresh(ff['ID Expiration Date']||'');
-  set('edit-medical-exp',ff['Medical Expiration Date']||'');
+  set('edit-medical-exp','');  /* never prepopulate — parent enters/uploads fresh */
   set('edit-address',ff['Address']||'');
   set('edit-city',ff['City']||'');
   set('edit-county',ff['County']||'');
