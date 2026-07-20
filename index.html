@@ -1587,7 +1587,7 @@ function showUpdateForm(){
   const genderEl=document.getElementById('edit-gender');
   if(genderEl) genderEl.value=(ff['Gender']||{}).name||ff['Gender']||'';
   const nrEl=document.getElementById('edit-new-returning');
-  if(nrEl) nrEl.value=(ff['New/Returning']||{}).name||ff['New/Returning']||'';
+  if(nrEl) nrEl.value=(ff['New/Returning']||{}).name||ff['New/Returning']||'Returning';
   set('edit-student-email',ff['Student Email Address']||ff['Student Email']||'');
   setEditDob(ff['Birthday']||'');
   set('edit-phone',ff['Student Phone']||'');
