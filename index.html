@@ -578,7 +578,7 @@ tailwind.config = {
             <option>Men - XLarge</option><option>Men - XXLarge</option><option>Men - XXXLarge</option>
           </select></div>
         <div><label class="block text-xs font-medium text-gray-400 mb-1.5 tracking-wide uppercase">School</label><input type="text" id="edit-school" class="neu-input w-full px-4 py-3 rounded-xl text-sm" placeholder="School name"></div>
-        <div class="md:col-span-2"><label class="block text-xs font-medium text-gray-400 mb-1.5 tracking-wide uppercase">ID Expiration Date</label><input type="date" id="edit-id-exp" class="neu-input w-full px-4 py-3 rounded-xl text-sm" oninput="checkEditIdExpiry()"><p id="edit-id-exp-warn" class="hidden text-xs mt-1.5 px-3 py-2 rounded-lg" style="color:#ef4444;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);">&#9888; The expired or expiring ID will delay the enrollment process.</p><p id="id-autoread-note" class="hidden text-xs mt-1.5" style="color:#00b4ff"></p></div>
+        <div class="md:col-span-2"><label class="block text-xs font-medium text-gray-400 mb-1.5 tracking-wide uppercase">ID Expiration Date</label><input type="date" id="edit-id-exp" class="neu-input w-full px-4 py-3 rounded-xl text-sm" oninput="checkEditIdExpiry()"><p id="edit-id-exp-warn" class="hidden text-xs mt-1.5 px-3 py-2 rounded-lg" style="color:#ef4444;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);">&#9888; The expired or expiring ID will delay the enrollment process.</p><p id="id-autoread-note" class="hidden text-xs mt-1.5" style="color:#00b4ff"></p></div><div class="md:col-span-2"><label class="block text-xs font-medium text-gray-400 mb-1.5 tracking-wide uppercase">Medical Certificate Expiration Date <span class="text-gray-600 normal-case">(if applicable)</span></label><input type="date" id="edit-medical-exp" class="neu-input w-full px-4 py-3 rounded-xl text-sm"><p id="medical-autoread-note" class="hidden text-xs mt-1.5" style="color:#00b4ff"></p></div>
         <div class="md:col-span-2"><label class="block text-xs font-medium text-gray-400 mb-1.5 tracking-wide uppercase">Address</label><input type="text" id="edit-address" class="neu-input w-full px-4 py-3 rounded-xl text-sm" placeholder="Street address"></div>
         <div><label class="block text-xs font-medium text-gray-400 mb-1.5 tracking-wide uppercase">City</label><input type="text" id="edit-city" class="neu-input w-full px-4 py-3 rounded-xl text-sm"></div>
         <div><label class="block text-xs font-medium text-gray-400 mb-1.5 tracking-wide uppercase">County</label><input type="text" id="edit-county" class="neu-input w-full px-4 py-3 rounded-xl text-sm"></div>
@@ -1137,6 +1137,20 @@ async function uploadDocToAirtable(file,fieldId,statusId){
             if(note){ note.textContent='We could not read the date automatically — please enter the ID expiration date below.'; note.classList.remove('hidden'); }
             setDropStatus(s,'success','Uploaded — please enter the expiration date manually');
           }
+        } else if(fieldId===AT_FIELD_MEDICAL){
+          setDropStatus(s,'reading','Reading the expiration date…');
+          const v=await readExpirationFromDoc(base64,file.type);
+          const mnote=document.getElementById('medical-autoread-note');
+          if(v && v.expirationDate){
+            const minp=document.getElementById('edit-medical-exp');
+            if(minp) minp.value=v.expirationDate;
+            if(mnote){ mnote.textContent='We read the medical certificate expiration ('+v.expirationDate+') — please confirm it is correct before saving.'; mnote.classList.remove('hidden'); }
+            setDropStatus(s,'success','Uploaded — expiration date read automatically');
+            showToast('Medical expiration read — please confirm','success');
+          } else {
+            if(mnote){ mnote.textContent='We could not read the date — please enter the medical expiration date below.'; mnote.classList.remove('hidden'); }
+            setDropStatus(s,'success','Uploaded — please enter the medical expiration date manually');
+          }
         }
       } else {
         let msg=txt||res.status;try{msg=JSON.parse(txt)?.error?.message||msg;}catch(_){}
@@ -1596,6 +1610,7 @@ function showUpdateForm(){
   set('edit-school',ff['School']||'');
   set('edit-id-exp',ff['ID Expiration Date']||'');
   idExpNeedsRefresh=idNeedsRefresh(ff['ID Expiration Date']||'');
+  set('edit-medical-exp',ff['Medical Expiration Date']||'');
   set('edit-address',ff['Address']||'');
   set('edit-city',ff['City']||'');
   set('edit-county',ff['County']||'');
@@ -1779,6 +1794,7 @@ async function saveStudentUpdate(){
   if(g('edit-school')) fields['School']=g('edit-school').trim();
   if(g('edit-doc-exp-date')) fields['ID Expiration Date']=g('edit-doc-exp-date');
   else if(g('edit-id-exp')) fields['ID Expiration Date']=g('edit-id-exp');
+  if(g('edit-medical-exp')) fields['Medical Expiration Date']=g('edit-medical-exp');
   if(g('edit-address')) fields['Address']=g('edit-address').trim();
   if(g('edit-city')) fields['City']=g('edit-city').trim();
   if(g('edit-county')) fields['County']=g('edit-county').trim();
