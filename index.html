@@ -124,6 +124,20 @@ tailwind.config = {
 .ace-upl-error .ace-x{animation:ace-shake .4s}
 @keyframes ace-pop{0%{transform:scale(0);opacity:0}60%{transform:scale(1.25)}100%{transform:scale(1);opacity:1}}
 @keyframes ace-shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-3px)}40%,80%{transform:translateX(3px)}}
+/* Big pop-up upload modal */
+#ace-upload-modal{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(4,12,20,.62);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);animation:ace-fade .18s ease}
+#ace-upload-modal.hidden{display:none}
+#ace-upload-modal .ace-mcard{background:#0f2137;border:1px solid rgba(92,194,255,.28);border-radius:18px;padding:30px 40px;text-align:center;box-shadow:0 24px 60px -18px rgba(0,0,0,.75);min-width:250px;max-width:88vw;animation:ace-pop-in .32s cubic-bezier(.2,.8,.2,1)}
+#ace-upload-modal .ace-micon{width:66px;height:66px;margin:0 auto 16px;display:grid;place-items:center}
+#ace-upload-modal .ace-mtitle{font-size:19px;font-weight:800;color:#e9f1fb;font-family:Arial,Helvetica,sans-serif;letter-spacing:-.01em}
+#ace-upload-modal .ace-msub{font-size:13px;color:#90a5c3;margin-top:6px;max-width:320px}
+.ace-bigspin{width:58px;height:58px;border:5px solid rgba(148,163,184,.22);border-top-color:#4fb0ff;border-radius:50%;animation:ace-spin .8s linear infinite}
+.ace-bigok{width:66px;height:66px;border-radius:50%;background:#22c55e;display:grid;place-items:center;color:#fff;animation:ace-pop-in .4s cubic-bezier(.2,.8,.2,1)}
+.ace-bigok svg{width:36px;height:36px;stroke-width:3.4}
+.ace-bigbad{width:66px;height:66px;border-radius:50%;background:#ef4444;display:grid;place-items:center;color:#fff;animation:ace-shake .5s}
+.ace-bigbad svg{width:34px;height:34px;stroke-width:3.6}
+@keyframes ace-fade{from{opacity:0}to{opacity:1}}
+@keyframes ace-pop-in{0%{transform:scale(.7);opacity:0}55%{transform:scale(1.06)}100%{transform:scale(1);opacity:1}}
 </style>
 </head>
 <body class="min-h-screen">
@@ -1075,7 +1089,7 @@ function idNeedsRefresh(iso){
 }
 /* Send an uploaded document to the Claude-vision webhook and get its expiration date. */
 async function readExpirationFromDoc(base64,mediaType){
-  const ac=new AbortController();const to=setTimeout(()=>ac.abort(),60000);
+  const ac=new AbortController();const to=setTimeout(()=>ac.abort(),25000);
   try{
     const res=await fetch('https://n8n.flyace.org/webhook/onboarding-validate-id',{
       method:'POST',headers:{'Content-Type':'application/json'},
@@ -1101,11 +1115,37 @@ function setDropStatus(el,state,msg){
   el.classList.remove('hidden');
   el.innerHTML='<span class="ace-upl ace-upl-'+state+'">'+icon+'<span>'+(msg||'')+'</span></span>';
 }
+/* ---- Big pop-up upload modal ---- */
+var _aceModalTimer=null;
+function ensureUploadModal(){
+  var m=document.getElementById('ace-upload-modal');
+  if(!m){
+    m=document.createElement('div'); m.id='ace-upload-modal'; m.className='hidden';
+    m.innerHTML='<div class="ace-mcard"><div class="ace-micon" id="ace-micon"></div><div class="ace-mtitle" id="ace-mtitle"></div><div class="ace-msub" id="ace-msub"></div></div>';
+    document.body.appendChild(m);
+  }
+  return m;
+}
+function showUploadModal(state,title,sub){
+  var m=ensureUploadModal(); clearTimeout(_aceModalTimer);
+  var ic=document.getElementById('ace-micon');
+  if(state==='uploading'||state==='reading') ic.innerHTML='<div class="ace-bigspin"></div>';
+  else if(state==='success') ic.innerHTML='<div class="ace-bigok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 12l5 5 11-11" stroke-linecap="round" stroke-linejoin="round"/></svg></div>';
+  else ic.innerHTML='<div class="ace-bigbad"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M6 6l12 12M18 6L6 18" stroke-linecap="round"/></svg></div>';
+  document.getElementById('ace-mtitle').textContent=title||'';
+  document.getElementById('ace-msub').textContent=sub||'';
+  m.className='';
+  if(state==='success') _aceModalTimer=setTimeout(hideUploadModal,1500);
+  if(state==='error')   _aceModalTimer=setTimeout(hideUploadModal,4500);
+}
+function hideUploadModal(){ var m=document.getElementById('ace-upload-modal'); if(m) m.className='hidden'; }
+
 async function uploadDocToAirtable(file,fieldId,statusId){
   const s=document.getElementById(statusId);
-  if(!currentLookupRecordId){ setDropStatus(s,'error','Save your information first, then upload.'); return; }
-  if(!fieldId){ setDropStatus(s,'error','Upload field not configured — contact admin.'); return; }
+  if(!currentLookupRecordId){ showUploadModal('error','Save first','Save your information first, then upload.'); setDropStatus(s,'error','Save your information first, then upload.'); return; }
+  if(!fieldId){ showUploadModal('error','Not configured','Upload field not configured — contact admin.'); setDropStatus(s,'error','Upload field not configured — contact admin.'); return; }
   const isCitizenship=(fieldId===AT_FIELD_ATTACHMENTS);
+  showUploadModal('uploading','Uploading document','Please wait a moment…');
   setDropStatus(s,'uploading','Uploading '+file.name+'…');
   const reader=new FileReader();
   reader.onload=async(e)=>{
@@ -1120,11 +1160,10 @@ async function uploadDocToAirtable(file,fieldId,statusId){
       }).finally(()=>clearTimeout(_to));
       let txt='';try{txt=await res.text();}catch(_){}
       if(res.ok){
+        showUploadModal('success','Uploaded!',file.name);
         setDropStatus(s,'success','Uploaded — '+file.name);
-        showToast('Document uploaded successfully','success');
         if(isCitizenship) citizenshipUploaded=true;
-        /* Auto-read the expiration date from a citizenship doc, only when the
-           stored ID is missing / expired / expiring within 90 days. */
+        /* Auto-read the expiration date in the background (small inline indicator, not the modal). */
         if(isCitizenship && idExpNeedsRefresh){
           setDropStatus(s,'reading','Reading the expiration date…');
           const v=await readExpirationFromDoc(base64,file.type);
@@ -1133,12 +1172,11 @@ async function uploadDocToAirtable(file,fieldId,statusId){
             const inp=document.getElementById('edit-id-exp');
             if(inp){ inp.value=v.expirationDate; if(typeof checkEditIdExpiry==='function') checkEditIdExpiry(); }
             if(note){ note.textContent='We read the expiration date ('+v.expirationDate+') from your document — please confirm it is correct before saving.'; note.classList.remove('hidden'); }
-            setDropStatus(s,'success','Uploaded — expiration date read automatically');
-            showToast('Expiration date read from your document — please confirm','success');
+            setDropStatus(s,'success','Expiration date read — please confirm below');
             if(v.isTemporary||v.outcome==='TEMPORARY') showToast('This looks like a temporary ID — a permanent passport or birth certificate is preferred.','error');
           } else {
             if(note){ note.textContent='We could not read the date automatically — please enter the ID expiration date below.'; note.classList.remove('hidden'); }
-            setDropStatus(s,'success','Uploaded — please enter the expiration date manually');
+            setDropStatus(s,'success','Uploaded — please enter the expiration date below');
           }
         } else if(fieldId===AT_FIELD_MEDICAL){
           setDropStatus(s,'reading','Reading the expiration date…');
@@ -1148,23 +1186,22 @@ async function uploadDocToAirtable(file,fieldId,statusId){
             const minp=document.getElementById('edit-medical-exp');
             if(minp) minp.value=v.expirationDate;
             if(mnote){ mnote.textContent='We read the medical certificate expiration ('+v.expirationDate+') — please confirm it is correct before saving.'; mnote.classList.remove('hidden'); }
-            setDropStatus(s,'success','Uploaded — expiration date read automatically');
-            showToast('Medical expiration read — please confirm','success');
+            setDropStatus(s,'success','Expiration date read — please confirm below');
           } else {
             if(mnote){ mnote.textContent='We could not read the date — please enter the medical expiration date below.'; mnote.classList.remove('hidden'); }
-            setDropStatus(s,'success','Uploaded — please enter the medical expiration date manually');
+            setDropStatus(s,'success','Uploaded — please enter the medical expiration date below');
           }
         }
       } else {
         let msg=txt||res.status;try{msg=JSON.parse(txt)?.error?.message||msg;}catch(_){}
+        showUploadModal('error','Upload failed',msg);
         setDropStatus(s,'error','Upload failed: '+msg);
-        showToast('Upload failed: '+msg,'error');
         console.error('Upload failed:',msg);
       }
     }catch(err){
-      const m=(err&&err.name==='AbortError')?'Upload timed out — please try a smaller file or try again.':('Upload error: '+((err&&err.message)||'unknown'));
+      const m=(err&&err.name==='AbortError')?'Upload timed out — please try a smaller file.':('Upload error: '+((err&&err.message)||'unknown'));
+      showUploadModal('error','Upload failed',m);
       setDropStatus(s,'error',m);
-      showToast(m,'error');
     }
   };
   reader.readAsDataURL(file);
