@@ -12,3 +12,7 @@ node_modules/
 # Local working backups
 index.html.bak*
 *.bak
+
+# Playwright
+test-results/
+playwright-report/
