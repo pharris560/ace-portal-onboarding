@@ -550,11 +550,12 @@ tailwind.config = {
             <option>Prefer not to say</option>
           </select></div>
         <div><label class="block text-xs font-medium text-gray-400 mb-1.5 tracking-wide uppercase">New / Returning <span class="text-red-400">*</span></label>
-          <select id="edit-new-returning" class="neu-input w-full px-4 py-3 rounded-xl text-sm">
+          <select id="edit-new-returning" class="neu-input w-full px-4 py-3 rounded-xl text-sm" onchange="onNrChange()">
             <option value="">Select...</option>
             <option value="New">New</option>
             <option value="Returning">Returning</option>
-          </select></div>
+          </select>
+          <label id="nr-confirm-row" class="flex items-start gap-2 mt-2 text-xs" style="color:#f4b94a"><input type="checkbox" id="nr-confirm" class="mt-0.5" onchange="onNrConfirm(this)"><span>Please confirm the student&rsquo;s status for 2026&ndash;2027 (returning students should be &ldquo;Returning&rdquo;).</span></label></div>
         <div><label class="block text-xs font-medium text-gray-400 mb-1.5 tracking-wide uppercase">Student Email</label><input type="email" id="edit-student-email" class="neu-input w-full px-4 py-3 rounded-xl text-sm"></div>
         <div><label class="block text-xs font-medium text-gray-400 mb-1.5 tracking-wide uppercase">Birthday</label>
           <input type="hidden" id="edit-birthday">
@@ -1602,7 +1603,8 @@ function showUpdateForm(){
   const genderEl=document.getElementById('edit-gender');
   if(genderEl) genderEl.value=(ff['Gender']||{}).name||ff['Gender']||'';
   const nrEl=document.getElementById('edit-new-returning');
-  if(nrEl) nrEl.value=(ff['New/Returning']||{}).name||ff['New/Returning']||'Returning';
+  if(nrEl) nrEl.value='Returning';
+  nrConfirmed=false; var _nc=document.getElementById('nr-confirm'); if(_nc) _nc.checked=false; var _ncr=document.getElementById('nr-confirm-row'); if(_ncr) _ncr.style.color='#f4b94a';
   set('edit-student-email',ff['Student Email Address']||ff['Student Email']||'');
   setEditDob(ff['Birthday']||'');
   set('edit-phone',ff['Student Phone']||'');
@@ -1778,6 +1780,10 @@ async function uploadCitizenshipDoc(recordId,file){
 var gradeConfirmed=false;
 function onGradeChange(){ gradeConfirmed=false; var cb=document.getElementById('grade-confirm'); if(cb) cb.checked=false; var r=document.getElementById('grade-confirm-row'); if(r) r.style.color='#f4b94a'; }
 function onGradeConfirm(cb){ gradeConfirmed=!!(cb&&cb.checked); var r=document.getElementById('grade-confirm-row'); if(r) r.style.color=gradeConfirmed?'#22c55e':'#f4b94a'; }
+/* New/Returning: defaults to 'Returning' on this (returning-student) form; parent must confirm. */
+var nrConfirmed=false;
+function onNrChange(){ nrConfirmed=false; var cb=document.getElementById('nr-confirm'); if(cb) cb.checked=false; var r=document.getElementById('nr-confirm-row'); if(r) r.style.color='#f4b94a'; }
+function onNrConfirm(cb){ nrConfirmed=!!(cb&&cb.checked); var r=document.getElementById('nr-confirm-row'); if(r) r.style.color=nrConfirmed?'#22c55e':'#f4b94a'; }
 async function saveStudentUpdate(){
   const btn=document.getElementById('edit-save-btn');
   const errEl=document.getElementById('edit-error');
@@ -1823,6 +1829,12 @@ async function saveStudentUpdate(){
   }
   if(attendWarn)attendWarn.classList.add('hidden');
   fields['Attendance']=attend;
+  if(!nrConfirmed){
+    var _ncr2=document.getElementById('nr-confirm-row'); if(_ncr2) _ncr2.style.color='#ef4444';
+    errEl.textContent='Please confirm the student’s status (New or Returning) for 2026–2027 (see the Student section).';errEl.classList.remove('hidden');
+    var _nre=document.getElementById('edit-new-returning'); if(_nre) _nre.scrollIntoView({behavior:'smooth',block:'center'});
+    btn.textContent='Submit for Review';btn.disabled=false;return;
+  }
   if(!gradeConfirmed){
     var _gcr2=document.getElementById('grade-confirm-row'); if(_gcr2) _gcr2.style.color='#ef4444';
     errEl.textContent='Please confirm the student’s grade for the 2026–2027 school year (see the Student section).';errEl.classList.remove('hidden');
