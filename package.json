@@ -1,7 +1,14 @@
 {
   "name": "ace-portal-functions",
   "version": "1.0.0",
+  "scripts": {
+    "test:smoke": "playwright test",
+    "test:install": "playwright install chromium"
+  },
   "dependencies": {
     "@netlify/blobs": "*"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0"
   }
 }
