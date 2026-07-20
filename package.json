@@ -1,0 +1,7 @@
+{
+  "name": "ace-portal-functions",
+  "version": "1.0.0",
+  "dependencies": {
+    "@netlify/blobs": "*"
+  }
+}

@@ -1,0 +1,14 @@
+# Dependencies
+node_modules/
+
+# Secrets / local env (Airtable PAT etc. live in Netlify env vars, never in the repo)
+.env
+.env.*
+.netlify/
+
+# Editor / OS
+.DS_Store
+
+# Local working backups
+index.html.bak*
+*.bak
