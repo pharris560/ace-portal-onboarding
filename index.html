@@ -592,7 +592,6 @@ tailwind.config = {
             <option>Men - XLarge</option><option>Men - XXLarge</option><option>Men - XXXLarge</option>
           </select></div>
         <div><label class="block text-xs font-medium text-gray-400 mb-1.5 tracking-wide uppercase">School</label><input type="text" id="edit-school" class="neu-input w-full px-4 py-3 rounded-xl text-sm" placeholder="School name"></div>
-        <div class="md:col-span-2"><label class="block text-xs font-medium text-gray-400 mb-1.5 tracking-wide uppercase">ID Expiration Date</label><input type="date" id="edit-id-exp" class="neu-input w-full px-4 py-3 rounded-xl text-sm" oninput="checkEditIdExpiry()"><p id="edit-id-exp-warn" class="hidden text-xs mt-1.5 px-3 py-2 rounded-lg" style="color:#ef4444;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);">&#9888; The expired or expiring ID will delay the enrollment process.</p><p id="id-autoread-note" class="hidden text-xs mt-1.5" style="color:#00b4ff"></p></div><div class="md:col-span-2"><label class="block text-xs font-medium text-gray-400 mb-1.5 tracking-wide uppercase">Medical Certificate Expiration Date <span class="text-gray-600 normal-case">(if applicable)</span></label><input type="date" id="edit-medical-exp" class="neu-input w-full px-4 py-3 rounded-xl text-sm"><p id="medical-autoread-note" class="hidden text-xs mt-1.5" style="color:#00b4ff"></p></div>
         <div class="md:col-span-2"><label class="block text-xs font-medium text-gray-400 mb-1.5 tracking-wide uppercase">Address</label><input type="text" id="edit-address" class="neu-input w-full px-4 py-3 rounded-xl text-sm" placeholder="Street address"></div>
         <div><label class="block text-xs font-medium text-gray-400 mb-1.5 tracking-wide uppercase">City</label><input type="text" id="edit-city" class="neu-input w-full px-4 py-3 rounded-xl text-sm"></div>
         <div><label class="block text-xs font-medium text-gray-400 mb-1.5 tracking-wide uppercase">County</label><input type="text" id="edit-county" class="neu-input w-full px-4 py-3 rounded-xl text-sm"></div>
@@ -648,8 +647,8 @@ tailwind.config = {
       <p id="attend-required-warn" class="hidden text-xs text-red-400 mt-2">Please select at least one attendance preference.</p>
       <div class="neon-line my-6"></div>
       <div class="neu-raised rounded-2xl p-8 mb-6" id="lr-uploads-card">
-      <h4 class="font-display text-base font-bold neon-text mb-1">Upload Updated Documents</h4>
-      <p class="text-xs text-white mb-5">Upload new or updated copies of required documents</p>
+      <h4 class="font-display text-base font-bold neon-text mb-1" id="uploads-card-title">Upload Updated Documents</h4>
+      <p class="text-xs text-white mb-5" id="uploads-card-sub">Upload new or updated copies of required documents</p>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
         <div>
           <label class="block text-xs font-medium text-gray-400 mb-2 tracking-wide uppercase">Proof of Citizenship / TSA Documentation</label>
@@ -675,6 +674,9 @@ tailwind.config = {
         </div>
       </div>
     </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mt-6">
+        <div class="md:col-span-2"><label class="block text-xs font-medium text-gray-400 mb-1.5 tracking-wide uppercase">ID Expiration Date</label><input type="date" id="edit-id-exp" class="neu-input w-full px-4 py-3 rounded-xl text-sm" oninput="checkEditIdExpiry()"><p id="edit-id-exp-warn" class="hidden text-xs mt-1.5 px-3 py-2 rounded-lg" style="color:#ef4444;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);">&#9888; The expired or expiring ID will delay the enrollment process.</p><p id="id-autoread-note" class="hidden text-xs mt-1.5" style="color:#00b4ff"></p></div><div class="md:col-span-2"><label class="block text-xs font-medium text-gray-400 mb-1.5 tracking-wide uppercase">Medical Certificate Expiration Date <span class="text-gray-600 normal-case">(if applicable)</span></label><input type="date" id="edit-medical-exp" class="neu-input w-full px-4 py-3 rounded-xl text-sm"><p id="medical-autoread-note" class="hidden text-xs mt-1.5" style="color:#00b4ff"></p></div>
+      </div>
       <p id="edit-error" class="text-xs text-red-400 mt-4 hidden"></p>
       <div class="flex flex-col md:flex-row gap-3 mt-6">
         <button onclick="saveStudentUpdate()" class="neu-btn-primary px-8 py-3 rounded-xl text-sm font-display tracking-wide" id="edit-save-btn">Submit for Review</button>
@@ -1684,6 +1686,8 @@ function showUpdateForm(createMode){
   const set=(id,val)=>{const el=document.getElementById(id);if(el)el.value=val||'';};
   var _ttl=document.getElementById('edit-card-title'); if(_ttl) _ttl.textContent=isCreateMode?'New Student Application':'Your Student Information';
   var _sub=document.getElementById('edit-card-sub'); if(_sub) _sub.textContent=isCreateMode?'Complete the fields below to apply to the ACE Weekend Academy — your application will be submitted for review.':'Fill in or update the fields below and save — your record will be submitted for review.';
+  var _utl=document.getElementById('uploads-card-title'); if(_utl) _utl.textContent=isCreateMode?'Upload Documents':'Upload Updated Documents';
+  var _usub=document.getElementById('uploads-card-sub'); if(_usub) _usub.textContent=isCreateMode?'Upload the required documents':'Upload new or updated copies of required documents';
   set('edit-first-name',ff['First Name']||'');
   set('edit-middle-name',ff['Middle Name']||'');
   set('edit-last-name',ff['Last Name']||'');
