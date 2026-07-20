@@ -158,7 +158,7 @@ tailwind.config = {
           <span id="user-initials" class="text-[11px] font-display font-bold neon-text-subtle">?</span>
         </div>
         <span id="user-name" class="text-xs text-gray-200 hidden md:inline max-w-[160px] truncate">—</span>
-        <button onclick="signOut()" class="text-[11px] text-gray-400 hover:text-red-400 ml-1 px-2 py-1 rounded-md" style="transition: color 0.2s ease; border-left:1px solid rgba(0,180,255,0.15);">Sign Out</button>
+        <button onclick="signOut()" class="text-sm font-medium text-gray-300 hover:text-red-400 ml-1 px-3 py-1.5 rounded-md" style="transition: color 0.2s ease; border-left:1px solid rgba(0,180,255,0.15);">Sign Out</button>
       </div>
       <button onclick="showView('home')" id="back-home-btn" class="hidden neu-btn px-4 py-2 rounded-xl text-sm font-medium text-gray-400 hover:text-white" style="transition: color 0.2s ease, opacity 0.2s ease;">
         <span class="mr-1">←</span> Back to Home
@@ -622,10 +622,10 @@ tailwind.config = {
       </div>
       <div class="neon-line my-6"></div>
       <h5 class="font-display text-lg font-semibold text-white mb-1">Attendance Preference <span class="text-red-400">*</span></h5>
-      <p class="text-xs text-gray-500 mb-4">Select at least one session (required)</p>
+      <p class="text-xs text-gray-500 mb-4">Select one session &mdash; AM or PM (required)</p>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <label class="attend-option neu-inset rounded-xl px-5 py-5 cursor-pointer flex items-center gap-4">
-          <input type="checkbox" id="edit-attend-am" value="AM Session 9am-11:30am" class="sr-only">
+          <input type="radio" name="edit-attend" id="edit-attend-am" value="AM Session 9am-11:30am" class="sr-only" onchange="onAttendChange()">
           <div class="attend-box">
             <svg class="attend-check w-4 h-4" fill="none" stroke="#ef4444" stroke-width="3.5" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
           </div>
@@ -635,7 +635,7 @@ tailwind.config = {
           </div>
         </label>
         <label class="attend-option neu-inset rounded-xl px-5 py-5 cursor-pointer flex items-center gap-4">
-          <input type="checkbox" id="edit-attend-pm" value="PM Session 12:30pm-3pm" class="sr-only">
+          <input type="radio" name="edit-attend" id="edit-attend-pm" value="PM Session 12:30pm-3pm" class="sr-only" onchange="onAttendChange()">
           <div class="attend-box">
             <svg class="attend-check w-4 h-4" fill="none" stroke="#ef4444" stroke-width="3.5" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
           </div>
@@ -645,7 +645,7 @@ tailwind.config = {
           </div>
         </label>
       </div>
-      <p id="attend-required-warn" class="hidden text-xs text-red-400 mt-2">Please select at least one attendance preference.</p>
+      <p id="attend-required-warn" class="hidden text-xs text-red-400 mt-2">Please select one session (AM or PM).</p>
       <div class="neon-line my-6"></div>
       <div class="neu-raised rounded-2xl p-8 mb-6" id="lr-uploads-card">
       <h4 class="font-display text-base font-bold neon-text mb-1" id="uploads-card-title">Upload Updated Documents</h4>
@@ -699,8 +699,9 @@ tailwind.config = {
       <h3 class="font-display text-2xl font-bold neon-text mb-3">Application Submitted</h3>
       <p class="text-base text-white max-w-lg mx-auto leading-relaxed mb-2">Thank you &mdash; your application has been submitted.</p>
       <p class="text-sm text-gray-400 max-w-lg mx-auto leading-relaxed mb-6">The ACE Staff will review your application and follow up by email with the next steps. You can log in to the portal any time to check your status or update your information.</p>
-      <p id="lr-submitted-id" class="text-xs text-gray-500 mb-6"></p>
-      <button onclick="showView('home')" class="neu-btn-primary px-8 py-3 rounded-xl text-sm font-display tracking-wide">Return to Home</button>
+      <p id="lr-submitted-id" class="text-xs text-gray-500 mb-4"></p>
+      <p class="text-xs text-gray-500 mb-6">For your security, you&rsquo;ll be signed out automatically.</p>
+      <button onclick="signOut()" class="neu-btn-primary px-8 py-3 rounded-xl text-sm font-display tracking-wide">Sign Out</button>
     </div>
   </div>
 </main>
@@ -831,6 +832,7 @@ function updateUserIndicator(){
   }
 }
 function signOut(){
+  clearTimeout(_autoSignoutTimer);
   loggedInUser=null;
   adminAuthenticated=false;
   currentLookupRecordId=null;
@@ -1829,6 +1831,9 @@ function showSubmittedConfirmation(studentId){
   if(idEl) idEl.textContent=studentId?('Student ID: '+studentId):'';
   var c=document.getElementById('lr-submitted-card');
   if(c){ c.classList.remove('hidden'); c.scrollIntoView({behavior:'smooth',block:'center'}); }
+  /* Automatically sign the user out shortly after submitting (privacy on shared devices). */
+  clearTimeout(_autoSignoutTimer);
+  _autoSignoutTimer=setTimeout(function(){ if(typeof signOut==='function') signOut(); }, 12000);
 }
 function downloadFormCopy(){
   const g=(id)=>document.getElementById(id)?.value||'';
@@ -1924,6 +1929,10 @@ var isCreateMode=false;
 /* In create mode there is no record yet, so citizenship/medical files are staged here and uploaded right after the record is created. */
 var pendingCitizenshipFile=null;
 var pendingMedicalFile=null;
+/* Attendance is a single choice (AM or PM) — radios enforce it; just clear the warning on change. */
+function onAttendChange(){ var w=document.getElementById('attend-required-warn'); if(w) w.classList.add('hidden'); }
+/* Timer that signs the user out shortly after a successful submit. */
+var _autoSignoutTimer=null;
 /* Grade must be actively confirmed each year — the stored grade is usually last year's. */
 var gradeConfirmed=false;
 /* Set true when a proof-of-citizenship doc is uploaded this session (see uploadDocToAirtable). */
