@@ -663,7 +663,7 @@ tailwind.config = {
     </div>
       <p id="edit-error" class="text-xs text-red-400 mt-4 hidden"></p>
       <div class="flex flex-col md:flex-row gap-3 mt-6">
-        <button onclick="saveStudentUpdate()" class="neu-btn-primary px-8 py-3 rounded-xl text-sm font-display tracking-wide" id="edit-save-btn">SAVE CHANGES</button>
+        <button onclick="saveStudentUpdate()" class="neu-btn-primary px-8 py-3 rounded-xl text-sm font-display tracking-wide" id="edit-save-btn">Submit for Review</button>
         <button onclick="cancelStudentUpdate()" class="neu-btn px-6 py-3 rounded-xl text-sm text-gray-400 font-display">Cancel</button>
         <button onclick="downloadFormCopy()" class="neu-btn px-6 py-3 rounded-xl text-sm font-display tracking-wide neon-text-subtle flex items-center gap-2">
           <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 16V4m0 12l-4-4m4 4l4-4M4 20h16"/></svg>
@@ -1042,7 +1042,7 @@ async function resetStep3(){
   if(pw!==confirm){errEl.textContent='Passwords do not match.';errEl.classList.remove('hidden');return;}
   if(!resetRecordId){errEl.textContent='Session expired. Please start over.';errEl.classList.remove('hidden');return;}
   const btn=document.getElementById('reset-btn-3');
-  btn.textContent='Saving...';btn.disabled=true;
+  btn.textContent='Submitting...';btn.disabled=true;
   const pwHash=await hashPassword(pw);
   const res=await atFetch('/'+AT_BASE_ID+'/'+AT_TABLE_ACCOUNTS+'/'+resetRecordId,{
     method:'PATCH',
@@ -1629,7 +1629,7 @@ function showUpdateForm(){
   set('edit-essay',ff['Student Essay']||'');
   document.getElementById('edit-success').classList.add('hidden');
   document.getElementById('edit-error').classList.add('hidden');
-  document.getElementById('edit-save-btn').textContent='SAVE CHANGES';
+  document.getElementById('edit-save-btn').textContent='Submit for Review';
   document.getElementById('edit-save-btn').disabled=false;
   card.classList.remove('hidden');
   card.scrollIntoView({behavior:'smooth'});
@@ -1776,7 +1776,7 @@ async function saveStudentUpdate(){
   const btn=document.getElementById('edit-save-btn');
   const errEl=document.getElementById('edit-error');
   errEl.classList.add('hidden');
-  btn.textContent='Saving...';btn.disabled=true;
+  btn.textContent='Submitting...';btn.disabled=true;
   const fields={};
   const g=(id)=>document.getElementById(id)?.value||'';
   if(g('edit-first-name')) fields['First Name']=g('edit-first-name').trim();
@@ -1813,7 +1813,7 @@ async function saveStudentUpdate(){
   const attendWarn=document.getElementById('attend-required-warn');
   if(attend.length===0){
     if(attendWarn)attendWarn.classList.remove('hidden');
-    btn.textContent='SAVE CHANGES';btn.disabled=false;return;
+    btn.textContent='Submit for Review';btn.disabled=false;return;
   }
   if(attendWarn)attendWarn.classList.add('hidden');
   fields['Attendance']=attend;
@@ -1822,13 +1822,13 @@ async function saveStudentUpdate(){
     if(essayWarn)essayWarn.classList.remove('hidden');
     errEl.textContent='Please complete the Student Essay (see above).';errEl.classList.remove('hidden');
     document.getElementById('edit-essay').scrollIntoView({behavior:'smooth',block:'center'});
-    btn.textContent='SAVE CHANGES';btn.disabled=false;return;
+    btn.textContent='Submit for Review';btn.disabled=false;return;
   }
   if(essayWarn)essayWarn.classList.add('hidden');
   fields['Student Essay']=g('edit-essay').trim();
   if(Object.keys(fields).length<=1){
     errEl.textContent='No changes to save.';errEl.classList.remove('hidden');
-    btn.textContent='SAVE CHANGES';btn.disabled=false;return;
+    btn.textContent='Submit for Review';btn.disabled=false;return;
   }
   fields['Status']='Pending';
   fields['Portal Last Updated']=new Date().toISOString().split('T')[0];
@@ -1854,7 +1854,7 @@ async function saveStudentUpdate(){
     await uploadCitizenshipDoc(currentLookupRecordId,fileInput.files[0]);
   }
 
-  btn.textContent='SAVE CHANGES';btn.disabled=false;
+  btn.textContent='Submit for Review';btn.disabled=false;
   if(enrollRes){
     document.getElementById('edit-success').classList.remove('hidden');
     showToast('Your information has been submitted for review','success');
