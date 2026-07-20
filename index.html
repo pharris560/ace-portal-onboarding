@@ -529,6 +529,12 @@ tailwind.config = {
       <div class="flex items-center gap-1 mb-8" id="lr-pipeline"></div>
       <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Please verify the Student's Information</h4>
       <div class="space-y-2" id="lr-fields"></div>
+      <div class="mt-6 pt-5" style="border-top:1px solid rgba(255,255,255,0.06)">
+        <button onclick="addAnotherChild()" class="neu-btn px-6 py-2.5 rounded-xl text-sm font-display tracking-wide neon-text-subtle inline-flex items-center gap-2">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5v14m-7-7h14" stroke-linecap="round"/></svg>
+          Add Another Child
+        </button>
+      </div>
     </div>
     <div class="neu-raised rounded-2xl p-8 mb-6" id="lr-actions-card">
       <h4 class="font-display text-base font-bold neon-text mb-1">Action Items Needed</h4>
@@ -700,8 +706,14 @@ tailwind.config = {
       <p class="text-base text-white max-w-lg mx-auto leading-relaxed mb-2">Thank you &mdash; your application has been submitted.</p>
       <p class="text-sm text-gray-400 max-w-lg mx-auto leading-relaxed mb-6">The ACE Staff will review your application and follow up by email with the next steps. You can log in to the portal any time to check your status or update your information.</p>
       <p id="lr-submitted-id" class="text-xs text-gray-500 mb-4"></p>
-      <p class="text-xs text-gray-500 mb-6">For your security, you&rsquo;ll be signed out automatically.</p>
-      <button onclick="signOut()" class="neu-btn-primary px-8 py-3 rounded-xl text-sm font-display tracking-wide">Sign Out</button>
+      <p class="text-xs text-gray-500 mb-6">Have more than one child? Add another application below. Otherwise, for your security you&rsquo;ll be signed out automatically.</p>
+      <div class="flex flex-col md:flex-row gap-3 justify-center">
+        <button onclick="addAnotherChild()" class="neu-btn px-8 py-3 rounded-xl text-sm font-display tracking-wide neon-text-subtle inline-flex items-center justify-center gap-2">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5v14m-7-7h14" stroke-linecap="round"/></svg>
+          Add Another Child
+        </button>
+        <button onclick="signOut()" class="neu-btn-primary px-8 py-3 rounded-xl text-sm font-display tracking-wide">Sign Out</button>
+      </div>
     </div>
   </div>
 </main>
@@ -1822,6 +1834,39 @@ function showNewApplicantForm(){
 }
 function cancelStudentUpdate(){
   document.getElementById('lr-edit-card').classList.add('hidden');
+}
+/* Start a fresh application for a SIBLING: carry over the parent/home contact info, blank the student
+   fields, and force a CREATE (recordId null) so the existing child's record is never overwritten. */
+function addAnotherChild(){
+  clearTimeout(_autoSignoutTimer);
+  var g=function(id){var e=document.getElementById(id);return e?e.value:'';};
+  var carry={
+    'Primary Parent First Name':g('edit-parent-first'),
+    'Primary Parent Last Name':g('edit-parent-last'),
+    'Primary Parent Email':g('edit-parent-email'),
+    'Primary Parent Phone':g('edit-parent-phone'),
+    'Secondary Parent First Name':g('edit-p2-first'),
+    'Secondary Parent Last Name':g('edit-p2-last'),
+    'Secondary Parent Phone':g('edit-p2-phone'),
+    'Secondary Parent Email':g('edit-p2-email'),
+    'Address':g('edit-address'),'City':g('edit-city'),'County':g('edit-county'),'Zip Code':g('edit-zip')
+  };
+  /* Fall back to the loaded record for anything the form didn't have (e.g. coming straight from lookup). */
+  var src=currentLookupFields||{};
+  var clean={};
+  Object.keys(carry).forEach(function(k){ var v=carry[k]||src[k]; if(v!=null&&v!=='') clean[k]=v; });
+  if(!clean['Primary Parent Email'] && loggedInUser && loggedInUser.email) clean['Primary Parent Email']=loggedInUser.email;
+  currentLookupRecordId=null;      /* force CREATE — new sibling record */
+  currentLookupFields=clean;       /* only contact/home info prefilled; student fields blank */
+  showView('lookup');
+  document.getElementById('lr-search-card').classList.add('hidden');
+  document.getElementById('lookup-results').classList.remove('hidden');
+  ['lr-info-card','lr-actions-card','lr-confirm-card','lr-submitted-card','lr-status-banner'].forEach(function(id){var e=document.getElementById(id);if(e)e.classList.add('hidden');});
+  document.getElementById('lr-uploads-card').classList.remove('hidden');
+  showUpdateForm(true);
+  var pe=document.getElementById('edit-parent-email');
+  if(pe&&!pe.value&&loggedInUser&&loggedInUser.email) pe.value=loggedInUser.email;
+  showToast('Starting a new application — your contact details are carried over.','success');
 }
 /* Full confirmation screen shown after a successful submit. */
 function showSubmittedConfirmation(studentId){
