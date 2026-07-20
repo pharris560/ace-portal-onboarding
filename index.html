@@ -113,6 +113,18 @@ tailwind.config = {
     #print-summary { position: fixed; top: 0; left: 0; width: 100%; background: white; color: black; padding: 32px; }
   }
 </style>
+<style>
+/* Upload status animations (document uploads) */
+.ace-upl{display:inline-flex;align-items:center;gap:6px;line-height:1.3}
+.ace-spin{width:12px;height:12px;border:2px solid rgba(148,163,184,0.3);border-top-color:currentColor;border-radius:50%;display:inline-block;animation:ace-spin .7s linear infinite;flex:none}
+@keyframes ace-spin{to{transform:rotate(360deg)}}
+.ace-check,.ace-x{width:14px;height:14px;display:inline-flex;align-items:center;justify-content:center;flex:none}
+.ace-check svg,.ace-x svg{width:14px;height:14px}
+.ace-upl-success .ace-check{animation:ace-pop .35s cubic-bezier(.2,.8,.2,1)}
+.ace-upl-error .ace-x{animation:ace-shake .4s}
+@keyframes ace-pop{0%{transform:scale(0);opacity:0}60%{transform:scale(1.25)}100%{transform:scale(1);opacity:1}}
+@keyframes ace-shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-3px)}40%,80%{transform:translateX(3px)}}
+</style>
 </head>
 <body class="min-h-screen">
 
@@ -566,7 +578,7 @@ tailwind.config = {
             <option>Men - XLarge</option><option>Men - XXLarge</option><option>Men - XXXLarge</option>
           </select></div>
         <div><label class="block text-xs font-medium text-gray-400 mb-1.5 tracking-wide uppercase">School</label><input type="text" id="edit-school" class="neu-input w-full px-4 py-3 rounded-xl text-sm" placeholder="School name"></div>
-        <div class="md:col-span-2"><label class="block text-xs font-medium text-gray-400 mb-1.5 tracking-wide uppercase">ID Expiration Date</label><input type="date" id="edit-id-exp" class="neu-input w-full px-4 py-3 rounded-xl text-sm" oninput="checkEditIdExpiry()"><p id="edit-id-exp-warn" class="hidden text-xs mt-1.5 px-3 py-2 rounded-lg" style="color:#ef4444;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);">&#9888; The expired or expiring ID will delay the enrollment process.</p></div>
+        <div class="md:col-span-2"><label class="block text-xs font-medium text-gray-400 mb-1.5 tracking-wide uppercase">ID Expiration Date</label><input type="date" id="edit-id-exp" class="neu-input w-full px-4 py-3 rounded-xl text-sm" oninput="checkEditIdExpiry()"><p id="edit-id-exp-warn" class="hidden text-xs mt-1.5 px-3 py-2 rounded-lg" style="color:#ef4444;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);">&#9888; The expired or expiring ID will delay the enrollment process.</p><p id="id-autoread-note" class="hidden text-xs mt-1.5" style="color:#00b4ff"></p></div>
         <div class="md:col-span-2"><label class="block text-xs font-medium text-gray-400 mb-1.5 tracking-wide uppercase">Address</label><input type="text" id="edit-address" class="neu-input w-full px-4 py-3 rounded-xl text-sm" placeholder="Street address"></div>
         <div><label class="block text-xs font-medium text-gray-400 mb-1.5 tracking-wide uppercase">City</label><input type="text" id="edit-city" class="neu-input w-full px-4 py-3 rounded-xl text-sm"></div>
         <div><label class="block text-xs font-medium text-gray-400 mb-1.5 tracking-wide uppercase">County</label><input type="text" id="edit-county" class="neu-input w-full px-4 py-3 rounded-xl text-sm"></div>
@@ -1050,17 +1062,49 @@ async function resetStep3(){
 /* ===== Application Form ===== */
 let currentStep=1;
 function goStep(n){document.getElementById('step-'+currentStep).classList.add('hidden');document.getElementById('step-'+n).classList.remove('hidden');for(let i=1;i<=5;i++){const c=document.getElementById('sc-'+i),l=c.parentElement.querySelector('span');if(i<n){c.className='step-circle completed';c.innerHTML='<svg width="16" height="16" fill="none" stroke="#0a1628" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>';l.className='text-[10px] mt-1 neon-text-subtle';}else if(i===n){c.className='step-circle active';c.textContent=i;l.className='text-[10px] mt-1 neon-text-subtle';}else{c.className='step-circle pending';c.textContent=i;l.className='text-[10px] mt-1 text-gray-600';}if(i<5){const cn=document.getElementById('scon-'+i);cn.className=i<n?'step-connector completed':'step-connector';}}currentStep=n;window.scrollTo({top:0,behavior:'smooth'});}
+/* Auto-read the passport expiration ONLY when the stored ID is missing, expired,
+   or expiring within 90 days. Set when the edit form is populated (showUpdateForm). */
+let idExpNeedsRefresh=false;
+function idNeedsRefresh(iso){
+  if(!iso) return true;
+  const d=new Date(iso); if(isNaN(d)) return true;
+  const cutoff=new Date(); cutoff.setDate(cutoff.getDate()+90);
+  return d<=cutoff;              /* expired OR within the next 90 days */
+}
+/* Send an uploaded document to the Claude-vision webhook and get its expiration date. */
+async function readExpirationFromDoc(base64,mediaType){
+  const ac=new AbortController();const to=setTimeout(()=>ac.abort(),60000);
+  try{
+    const res=await fetch('https://n8n.flyace.org/webhook/onboarding-validate-id',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({base64,mediaType:mediaType||'image/jpeg'}),signal:ac.signal
+    });
+    if(!res.ok) return null;
+    return await res.json();
+  }catch(_){ return null; }
+  finally{ clearTimeout(to); }
+}
+/* Animated upload status. state = 'uploading' | 'reading' | 'success' | 'error'. */
+function setDropStatus(el,state,msg){
+  if(!el) return;
+  const icon={
+    uploading:'<span class="ace-spin"></span>',
+    reading:'<span class="ace-spin"></span>',
+    success:'<span class="ace-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path d="M4 12l5 5 11-11" stroke-linecap="round" stroke-linejoin="round"/></svg></span>',
+    error:'<span class="ace-x"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path d="M6 6l12 12M18 6L6 18" stroke-linecap="round"/></svg></span>'
+  }[state]||'';
+  const color={uploading:'#9ca3af',reading:'#00b4ff',success:'#22c55e',error:'#f87171'}[state]||'';
+  el.className='text-[11px] mt-1 font-medium';
+  el.style.color=color;
+  el.classList.remove('hidden');
+  el.innerHTML='<span class="ace-upl ace-upl-'+state+'">'+icon+'<span>'+(msg||'')+'</span></span>';
+}
 async function uploadDocToAirtable(file,fieldId,statusId){
   const s=document.getElementById(statusId);
-  if(!currentLookupRecordId){
-    if(s){s.textContent='Save your information first, then upload.';s.className='text-[10px] text-yellow-400 font-medium';}
-    return;
-  }
-  if(!fieldId){
-    if(s){s.textContent='Upload field not configured — contact admin.';s.className='text-[10px] text-yellow-400 font-medium';}
-    return;
-  }
-  if(s){s.textContent='Uploading…';s.className='text-[10px] text-gray-400 font-medium';}
+  if(!currentLookupRecordId){ setDropStatus(s,'error','Save your information first, then upload.'); return; }
+  if(!fieldId){ setDropStatus(s,'error','Upload field not configured — contact admin.'); return; }
+  const isCitizenship=(fieldId===AT_FIELD_ATTACHMENTS);
+  setDropStatus(s,'uploading','Uploading '+file.name+'…');
   const reader=new FileReader();
   reader.onload=async(e)=>{
     const base64=e.target.result.split(',')[1];
@@ -1074,16 +1118,36 @@ async function uploadDocToAirtable(file,fieldId,statusId){
       }).finally(()=>clearTimeout(_to));
       let txt='';try{txt=await res.text();}catch(_){}
       if(res.ok){
-        if(s){s.textContent='Uploaded: '+file.name;s.className='text-[10px] text-green-500 font-medium';}
-        console.log('Upload OK — record:',currentLookupRecordId,'field:',fieldId);
+        setDropStatus(s,'success','Uploaded — '+file.name);
+        showToast('Document uploaded successfully','success');
+        /* Auto-read the expiration date from a citizenship doc, only when the
+           stored ID is missing / expired / expiring within 90 days. */
+        if(isCitizenship && idExpNeedsRefresh){
+          setDropStatus(s,'reading','Reading the expiration date…');
+          const v=await readExpirationFromDoc(base64,file.type);
+          const note=document.getElementById('id-autoread-note');
+          if(v && v.expirationDate){
+            const inp=document.getElementById('edit-id-exp');
+            if(inp){ inp.value=v.expirationDate; if(typeof checkEditIdExpiry==='function') checkEditIdExpiry(); }
+            if(note){ note.textContent='We read the expiration date ('+v.expirationDate+') from your document — please confirm it is correct before saving.'; note.classList.remove('hidden'); }
+            setDropStatus(s,'success','Uploaded — expiration date read automatically');
+            showToast('Expiration date read from your document — please confirm','success');
+            if(v.isTemporary||v.outcome==='TEMPORARY') showToast('This looks like a temporary ID — a permanent passport or birth certificate is preferred.','error');
+          } else {
+            if(note){ note.textContent='We could not read the date automatically — please enter the ID expiration date below.'; note.classList.remove('hidden'); }
+            setDropStatus(s,'success','Uploaded — please enter the expiration date manually');
+          }
+        }
       } else {
         let msg=txt||res.status;try{msg=JSON.parse(txt)?.error?.message||msg;}catch(_){}
-        if(s){s.textContent='Upload failed: '+msg;s.className='text-[10px] text-red-400 font-medium';}
+        setDropStatus(s,'error','Upload failed: '+msg);
+        showToast('Upload failed: '+msg,'error');
         console.error('Upload failed:',msg);
       }
     }catch(err){
       const m=(err&&err.name==='AbortError')?'Upload timed out — please try a smaller file or try again.':('Upload error: '+((err&&err.message)||'unknown'));
-      if(s){s.textContent=m;s.className='text-[10px] text-red-400 font-medium';}
+      setDropStatus(s,'error',m);
+      showToast(m,'error');
     }
   };
   reader.readAsDataURL(file);
@@ -1531,6 +1595,7 @@ function showUpdateForm(){
   set('edit-shirt',(ff['Shirt Size']||{}).name||ff['Shirt Size']||'');
   set('edit-school',ff['School']||'');
   set('edit-id-exp',ff['ID Expiration Date']||'');
+  idExpNeedsRefresh=idNeedsRefresh(ff['ID Expiration Date']||'');
   set('edit-address',ff['Address']||'');
   set('edit-city',ff['City']||'');
   set('edit-county',ff['County']||'');
