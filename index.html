@@ -655,7 +655,8 @@ tailwind.config = {
       <div class="neon-line my-6"></div>
       <div class="neu-raised rounded-2xl p-8 mb-6" id="lr-uploads-card">
       <h4 class="font-display text-base font-bold neon-text mb-1" id="uploads-card-title">Upload Updated Documents</h4>
-      <p class="text-xs text-white mb-5" id="uploads-card-sub">Upload new or updated copies of required documents</p>
+      <p class="text-xs text-white mb-2" id="uploads-card-sub">Upload new or updated copies of required documents</p>
+      <p class="text-[11px] text-gray-500 mb-5">Accepted: PDF, JPG, or PNG &middot; up to 5&nbsp;MB each. Large phone photos are resized automatically. iPhone photos saved as HEIC aren&rsquo;t supported &mdash; use &ldquo;Most Compatible&rdquo; in Camera settings, or take a screenshot.</p>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
         <div>
           <label class="block text-xs font-medium text-gray-400 mb-2 tracking-wide uppercase">Proof of Citizenship / TSA Documentation</label>
@@ -1177,8 +1178,35 @@ function showUploadModal(state,title,sub){
 }
 function hideUploadModal(){ var m=document.getElementById('ace-upload-modal'); if(m) m.className='hidden'; }
 
+/* Shrink oversized JPG/PNG photos (e.g. phone pics of a birth certificate) under Airtable's 5 MB limit
+   before upload. PDFs/other types pass through unchanged (can't compress in-browser). */
+async function compressImageIfNeeded(file, statusEl, maxBytes){
+  maxBytes = maxBytes || 4.5*1024*1024;
+  if(!file || !/^image\/(jpe?g|png)$/i.test(file.type||'')) return file;
+  if(file.size <= maxBytes) return file;
+  try{
+    if(statusEl) setDropStatus(statusEl,'uploading','Optimizing photo…');
+    const dataUrl=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(file);});
+    const img=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=dataUrl;});
+    const MAX_DIM=2200;
+    let scale=Math.min(1, MAX_DIM/Math.max(img.width||1,img.height||1));
+    let w=Math.max(1,Math.round((img.width||1)*scale)), h=Math.max(1,Math.round((img.height||1)*scale));
+    let quality=0.85, blob=null;
+    for(let attempt=0; attempt<9; attempt++){
+      const canvas=document.createElement('canvas'); canvas.width=w; canvas.height=h;
+      const ctx=canvas.getContext('2d'); ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,w,h); ctx.drawImage(img,0,0,w,h);
+      blob=await new Promise(r=>canvas.toBlob(r,'image/jpeg',quality));
+      if(blob && blob.size<=maxBytes) break;
+      if(quality>0.5) quality-=0.15; else { w=Math.max(1,Math.round(w*0.85)); h=Math.max(1,Math.round(h*0.85)); }
+    }
+    if(!blob || blob.size>maxBytes) return file; /* couldn't get under the limit — let the 5 MB guard message show */
+    const nm=(file.name||'photo').replace(/\.(png|jpe?g|heic|heif)$/i,'')+'.jpg';
+    return new File([blob], nm, {type:'image/jpeg', lastModified: Date.now()});
+  }catch(_){ return file; }
+}
 async function uploadDocToAirtable(file,fieldId,statusId){
   const s=document.getElementById(statusId);
+  try{ file = await compressImageIfNeeded(file, s); }catch(_){}
   if(!currentLookupRecordId){
     /* Create flow: no record yet — stage the file and upload it right after the record is created. */
     if(isCreateMode){ stageDocForCreate(file,fieldId,s); return; }
