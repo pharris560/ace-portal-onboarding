@@ -178,6 +178,9 @@ tailwind.config = {
   <!-- ACE Weekend Academy -->
   <div class="mb-10">
     <h2 class="font-display text-2xl font-bold text-white text-center mb-8" style="letter-spacing:0.04em;">ACE Weekend Academy</h2>
+    <p class="text-sm text-white text-center max-w-xl mx-auto mb-6 px-4 py-3 rounded-xl" style="background:rgba(0,180,255,0.06);border:1px solid rgba(0,180,255,0.15);">
+      <strong>Attention Returning Students:</strong> All first time users must start by creating a <strong>New ACE Student</strong> account. Once your account is created, you will be able to sign in using the <strong>Existing ACE Student</strong> to log in.
+    </p>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl mx-auto">
       <!-- New ACE Student -->
       <button onclick="showView('register')" class="neu-raised rounded-2xl p-10 text-center group cursor-pointer" style="transition: transform 0.2s cubic-bezier(0.22,1,0.36,1), box-shadow 0.2s ease;" onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='0 8px 32px rgba(0,180,255,0.12)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
@@ -217,6 +220,35 @@ tailwind.config = {
         </div>
         <h3 class="font-display text-xl font-bold text-white mb-3">Staff/Volunteers</h3>
         <p class="text-base text-white leading-relaxed">Access the admissions pipeline, student data, and management tools. Password required.</p>
+      </button>
+    </div>
+  </div>
+  <div class="neon-line my-8 max-w-xs mx-auto"></div>
+  <!-- Join Our Team -->
+  <div class="mb-4">
+    <h2 class="font-display text-2xl font-bold text-white text-center mb-8" style="letter-spacing:0.04em;">Join Our Team</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl mx-auto">
+      <!-- Apply: Staff -->
+      <button onclick="showView('staff-apply')" class="neu-raised rounded-2xl p-10 text-center group cursor-pointer" style="transition: transform 0.2s cubic-bezier(0.22,1,0.36,1), box-shadow 0.2s ease;" onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='0 8px 32px rgba(0,180,255,0.12)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+        <div class="w-20 h-20 mx-auto mb-6 rounded-2xl flex items-center justify-center" style="background:rgba(0,180,255,0.08);border:1px solid rgba(0,180,255,0.15);box-shadow:0 0 20px rgba(0,180,255,0.08)">
+          <svg width="36" height="36" fill="none" stroke="#00b4ff" stroke-width="1.5" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2m18-9a4 4 0 100-8 4 4 0 000 8zm-13 9v-2a4 4 0 014-4h4a4 4 0 014 4v2"/></svg>
+        </div>
+        <h3 class="font-display text-xl font-bold text-white mb-3">Apply for a Staff Position</h3>
+        <p class="text-base text-white leading-relaxed">Interested in working with ACE? Submit your information and our team will follow up.</p>
+      </button>
+      <!-- Apply: Volunteer -->
+      <button onclick="showView('volunteer-apply')" class="neu-raised rounded-2xl p-10 text-center group cursor-pointer" style="transition: transform 0.2s cubic-bezier(0.22,1,0.36,1), box-shadow 0.2s ease;" onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='0 8px 32px rgba(0,180,255,0.12)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+        <div class="w-20 h-20 mx-auto mb-6 rounded-2xl flex items-center justify-center" style="background:rgba(0,180,255,0.08);border:1px solid rgba(0,180,255,0.15);box-shadow:0 0 20px rgba(0,180,255,0.08)">
+          <svg width="36" height="36" fill="none" stroke="#00b4ff" stroke-width="1.5" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+        </div>
+        <h3 class="font-display text-xl font-bold text-white mb-3">Volunteer With Us</h3>
+        <p class="text-base text-white leading-relaxed">Give back to the ACE community. Tell us about yourself and how you'd like to help.</p>
+      </button>
+    </div>
+    <div class="text-center mt-6">
+      <button onclick="showView('coverage-lookup')" class="neu-btn px-6 py-3 rounded-xl text-sm font-display tracking-wide neon-text-subtle inline-flex items-center gap-2">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+        Already on the team? View / Sign Up for Saturday Schedule
       </button>
     </div>
   </div>
@@ -282,7 +314,8 @@ tailwind.config = {
     <p id="login-error" class="text-xs text-red-400 mt-3 hidden"></p>
     <button onclick="loginStudent()" class="neu-btn-primary px-8 py-3 rounded-xl text-sm font-display tracking-wide w-full mt-6" id="login-submit-btn">SIGN IN</button>
     <div class="text-center mt-4">
-      <p class="text-xs text-white">New to ACE? <button onclick="showView('register')" class="neon-text-subtle hover:text-white" style="transition:color 0.2s">Create an account</button></p>
+      <p class="text-xs text-white">New student? <button onclick="showView('register')" class="neon-text-subtle hover:text-white" style="transition:color 0.2s">Create an account</button></p>
+      <p class="text-xs text-white mt-2">Applying to join our team? <button onclick="showView('staff-apply')" class="neon-text-subtle hover:text-white" style="transition:color 0.2s">Staff</button> &middot; <button onclick="showView('volunteer-apply')" class="neon-text-subtle hover:text-white" style="transition:color 0.2s">Volunteer</button></p>
       <p class="text-xs text-white mt-2"><button onclick="showView('reset')" class="neon-text-subtle hover:text-white" style="transition:color 0.2s">Forgot your password?</button></p>
     </div>
   </div>
@@ -721,6 +754,100 @@ tailwind.config = {
       </div>
     </div>
   </div>
+</main>
+
+<!-- VIEW: STAFF APPLICATION -->
+<main id="view-staff-apply" class="max-w-md mx-auto px-6 py-16 hidden fade-in">
+  <div class="neu-raised rounded-2xl p-8" id="staff-apply-form-card">
+    <div class="text-center mb-6">
+      <div class="w-14 h-14 mx-auto mb-4 rounded-2xl flex items-center justify-center" style="background:rgba(0,180,255,0.08);border:1px solid rgba(0,180,255,0.15);">
+        <svg width="24" height="24" fill="none" stroke="#00b4ff" stroke-width="1.5" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2m18-9a4 4 0 100-8 4 4 0 000 8zm-13 9v-2a4 4 0 014-4h4a4 4 0 014 4v2"/></svg>
+      </div>
+      <h2 class="font-display text-xl font-bold text-white mb-1">Apply for a Staff Position</h2>
+      <p class="text-sm text-gray-500">Tell us a bit about yourself and we'll be in touch.</p>
+    </div>
+    <div class="space-y-4">
+      <div><label class="block text-xs font-medium text-gray-400 mb-1.5 tracking-wide uppercase">Full Name</label><input type="text" id="staff-name" class="neu-input w-full px-4 py-3 rounded-xl text-sm" placeholder="Jane Smith"></div>
+      <div><label class="block text-xs font-medium text-gray-400 mb-1.5 tracking-wide uppercase">Email</label><input type="email" id="staff-email" class="neu-input w-full px-4 py-3 rounded-xl text-sm" placeholder="jane@example.com"></div>
+      <div><label class="block text-xs font-medium text-gray-400 mb-1.5 tracking-wide uppercase">Phone</label><input type="tel" id="staff-phone" class="neu-input w-full px-4 py-3 rounded-xl text-sm" placeholder="(555) 555-5555"></div>
+      <div><label class="block text-xs font-medium text-gray-400 mb-1.5 tracking-wide uppercase">Position Interested In</label>
+        <select id="staff-role" class="neu-input w-full px-4 py-3 rounded-xl text-sm">
+          <option value="Instructor">Instructor</option>
+          <option value="Coordinator">Coordinator</option>
+          <option value="Administrator">Administrator</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+      <div><label class="block text-xs font-medium text-gray-400 mb-1.5 tracking-wide uppercase">Tell us about yourself <span class="text-gray-600 normal-case">(optional)</span></label><textarea id="staff-notes" rows="4" class="neu-input w-full px-4 py-3 rounded-xl text-sm" placeholder="Relevant experience, availability, etc."></textarea></div>
+      <p id="staff-apply-error" class="text-xs text-red-400 hidden"></p>
+      <button onclick="submitStaffApplication()" id="staff-apply-btn" class="neu-btn-primary w-full py-3 rounded-xl text-sm font-display tracking-wide">Submit Application</button>
+    </div>
+  </div>
+  <div class="neu-raised rounded-2xl p-10 text-center hidden" id="staff-apply-success">
+    <div class="w-20 h-20 mx-auto mb-6 rounded-full flex items-center justify-center" style="background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.35);box-shadow:0 0 24px rgba(34,197,94,0.12)">
+      <svg width="40" height="40" fill="none" stroke="#22c55e" stroke-width="2.5" viewBox="0 0 24 24"><path d="M4 12l5 5 11-11" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <h3 class="font-display text-2xl font-bold neon-text mb-3">Application Submitted</h3>
+    <p class="text-base text-white max-w-lg mx-auto leading-relaxed mb-6">Thank you for your interest — ACE Staff will review your application and follow up by email.</p>
+    <button onclick="showView('home')" class="neu-btn-primary px-8 py-3 rounded-xl text-sm font-display tracking-wide">Return to Home</button>
+  </div>
+</main>
+
+<!-- VIEW: VOLUNTEER APPLICATION -->
+<main id="view-volunteer-apply" class="max-w-md mx-auto px-6 py-16 hidden fade-in">
+  <div class="neu-raised rounded-2xl p-8" id="volunteer-apply-form-card">
+    <div class="text-center mb-6">
+      <div class="w-14 h-14 mx-auto mb-4 rounded-2xl flex items-center justify-center" style="background:rgba(0,180,255,0.08);border:1px solid rgba(0,180,255,0.15);">
+        <svg width="24" height="24" fill="none" stroke="#00b4ff" stroke-width="1.5" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+      </div>
+      <h2 class="font-display text-xl font-bold text-white mb-1">Volunteer With Us</h2>
+      <p class="text-sm text-gray-500">Tell us a bit about yourself and how you'd like to help.</p>
+    </div>
+    <div class="space-y-4">
+      <div><label class="block text-xs font-medium text-gray-400 mb-1.5 tracking-wide uppercase">Full Name</label><input type="text" id="volunteer-name" class="neu-input w-full px-4 py-3 rounded-xl text-sm" placeholder="Jane Smith"></div>
+      <div><label class="block text-xs font-medium text-gray-400 mb-1.5 tracking-wide uppercase">Email</label><input type="email" id="volunteer-email" class="neu-input w-full px-4 py-3 rounded-xl text-sm" placeholder="jane@example.com"></div>
+      <div><label class="block text-xs font-medium text-gray-400 mb-1.5 tracking-wide uppercase">Phone</label><input type="tel" id="volunteer-phone" class="neu-input w-full px-4 py-3 rounded-xl text-sm" placeholder="(555) 555-5555"></div>
+      <div><label class="block text-xs font-medium text-gray-400 mb-1.5 tracking-wide uppercase">Availability</label><textarea id="volunteer-availability" rows="3" class="neu-input w-full px-4 py-3 rounded-xl text-sm" placeholder="e.g. Saturdays AM, occasional events"></textarea></div>
+      <div><label class="block text-xs font-medium text-gray-400 mb-1.5 tracking-wide uppercase">Tell us about yourself <span class="text-gray-600 normal-case">(optional)</span></label><textarea id="volunteer-notes" rows="4" class="neu-input w-full px-4 py-3 rounded-xl text-sm" placeholder="Why you'd like to volunteer, relevant experience, etc."></textarea></div>
+      <p id="volunteer-apply-error" class="text-xs text-red-400 hidden"></p>
+      <button onclick="submitVolunteerApplication()" id="volunteer-apply-btn" class="neu-btn-primary w-full py-3 rounded-xl text-sm font-display tracking-wide">Submit Application</button>
+    </div>
+  </div>
+  <div class="neu-raised rounded-2xl p-10 text-center hidden" id="volunteer-apply-success">
+    <div class="w-20 h-20 mx-auto mb-6 rounded-full flex items-center justify-center" style="background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.35);box-shadow:0 0 24px rgba(34,197,94,0.12)">
+      <svg width="40" height="40" fill="none" stroke="#22c55e" stroke-width="2.5" viewBox="0 0 24 24"><path d="M4 12l5 5 11-11" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <h3 class="font-display text-2xl font-bold neon-text mb-3">Application Submitted</h3>
+    <p class="text-base text-white max-w-lg mx-auto leading-relaxed mb-6">Thank you for your interest — ACE Staff will review your application and follow up by email.</p>
+    <button onclick="showView('home')" class="neu-btn-primary px-8 py-3 rounded-xl text-sm font-display tracking-wide">Return to Home</button>
+  </div>
+</main>
+
+<!-- VIEW: COVERAGE LOOKUP (email-only, no password — mirrors the Zoom self-booking low-friction pattern) -->
+<main id="view-coverage-lookup" class="max-w-md mx-auto px-6 py-16 hidden fade-in">
+  <div class="neu-raised rounded-2xl p-8">
+    <div class="text-center mb-6">
+      <div class="w-14 h-14 mx-auto mb-4 rounded-2xl flex items-center justify-center" style="background:rgba(0,180,255,0.08);border:1px solid rgba(0,180,255,0.15);">
+        <svg width="24" height="24" fill="none" stroke="#00b4ff" stroke-width="1.5" viewBox="0 0 24 24"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+      </div>
+      <h2 class="font-display text-xl font-bold text-white mb-1">Saturday Coverage Schedule</h2>
+      <p class="text-sm text-gray-500">Enter the email on file for your Staff/Volunteer record.</p>
+    </div>
+    <div class="space-y-4">
+      <div><label class="block text-xs font-medium text-gray-400 mb-1.5 tracking-wide uppercase">Email</label><input type="email" id="coverage-lookup-email" class="neu-input w-full px-4 py-3 rounded-xl text-sm" placeholder="jane@example.com" onkeydown="if(event.key==='Enter')lookupCoverageUser()"></div>
+      <p id="coverage-lookup-error" class="text-xs text-red-400 hidden"></p>
+      <button onclick="lookupCoverageUser()" id="coverage-lookup-btn" class="neu-btn-primary w-full py-3 rounded-xl text-sm font-display tracking-wide">Continue</button>
+    </div>
+  </div>
+</main>
+
+<!-- VIEW: COVERAGE SCHEDULE -->
+<main id="view-coverage" class="max-w-2xl mx-auto px-6 py-16 hidden fade-in">
+  <div class="text-center mb-8">
+    <h2 class="font-display text-xl font-bold text-white mb-1">Saturday Coverage Schedule</h2>
+    <p class="text-sm text-gray-500">Welcome, <span id="coverage-user-name" class="neon-text-subtle"></span>. Sign up for a slot, or see who else is covering.</p>
+  </div>
+  <div id="coverage-schedule"></div>
 </main>
 
 <!-- VIEW: ADMIN DASHBOARD -->
@@ -1368,6 +1495,240 @@ async function atFetch(endpoint, opts={}){
 function atErrorMsg(fallback){
   if(!lastAtError) return fallback;
   return fallback + ' (' + (lastAtError.message||'unknown error') + ')';
+}
+
+/* ===== Staff / Volunteer Applications ===== */
+const AT_TABLE_STAFF = 'tblylF50qyHNtKHLH';
+const AT_TABLE_VOLUNTEERS = 'tbltf83MZS1TEE6Kt';
+
+async function submitStaffApplication(){
+  const name = document.getElementById('staff-name').value.trim();
+  const email = document.getElementById('staff-email').value.trim();
+  const phone = document.getElementById('staff-phone').value.trim();
+  const role = document.getElementById('staff-role').value;
+  const notes = document.getElementById('staff-notes').value.trim();
+  const errEl = document.getElementById('staff-apply-error');
+  errEl.classList.add('hidden');
+
+  if(!name || !email || !phone){
+    errEl.textContent = 'Please fill in your name, email, and phone number.';
+    errEl.classList.remove('hidden');
+    return;
+  }
+
+  const btn = document.getElementById('staff-apply-btn');
+  btn.disabled = true; btn.textContent = 'Submitting...';
+
+  const result = await atFetch('/' + AT_BASE_ID + '/' + AT_TABLE_STAFF, {
+    method: 'POST',
+    body: JSON.stringify({ fields: {
+      'Full Name': name,
+      'Email': email,
+      'Phone': phone,
+      'Role': role,
+      'Notes': notes,
+      'Status': 'Pending',
+      'Application Date': new Date().toISOString().slice(0,10)
+    }})
+  });
+
+  btn.disabled = false; btn.textContent = 'Submit Application';
+
+  if(!result){
+    errEl.textContent = atErrorMsg('Something went wrong submitting your application. Please try again.');
+    errEl.classList.remove('hidden');
+    return;
+  }
+
+  document.getElementById('staff-apply-form-card').classList.add('hidden');
+  document.getElementById('staff-apply-success').classList.remove('hidden');
+}
+
+async function submitVolunteerApplication(){
+  const name = document.getElementById('volunteer-name').value.trim();
+  const email = document.getElementById('volunteer-email').value.trim();
+  const phone = document.getElementById('volunteer-phone').value.trim();
+  const availability = document.getElementById('volunteer-availability').value.trim();
+  const notes = document.getElementById('volunteer-notes').value.trim();
+  const errEl = document.getElementById('volunteer-apply-error');
+  errEl.classList.add('hidden');
+
+  if(!name || !email || !phone){
+    errEl.textContent = 'Please fill in your name, email, and phone number.';
+    errEl.classList.remove('hidden');
+    return;
+  }
+
+  const btn = document.getElementById('volunteer-apply-btn');
+  btn.disabled = true; btn.textContent = 'Submitting...';
+
+  const result = await atFetch('/' + AT_BASE_ID + '/' + AT_TABLE_VOLUNTEERS, {
+    method: 'POST',
+    body: JSON.stringify({ fields: {
+      'Full Name': name,
+      'Email': email,
+      'Phone': phone,
+      'Availability Notes': availability,
+      'Notes': notes,
+      'Status': 'Pending',
+      'Application Date': new Date().toISOString().slice(0,10)
+    }})
+  });
+
+  btn.disabled = false; btn.textContent = 'Submit Application';
+
+  if(!result){
+    errEl.textContent = atErrorMsg('Something went wrong submitting your application. Please try again.');
+    errEl.classList.remove('hidden');
+    return;
+  }
+
+  document.getElementById('volunteer-apply-form-card').classList.add('hidden');
+  document.getElementById('volunteer-apply-success').classList.remove('hidden');
+}
+
+/* ===== Saturday Coverage Schedule (self-service sign-up + viewable calendar) ===== */
+const AT_TABLE_COVERAGE = 'tbl3DGD8ruJjlblf9';
+const COVERAGE_SLOTS = ['Falcons AM','Falcons PM','Hawks AM','Hawks PM','Eagles AM','Sparrows AM','ACE Staff'];
+let coverageUser = null; /* {type:'Staff'|'Volunteer', recordId, name} */
+
+function getUpcomingSaturdays(n){
+  const dates = [];
+  const d = new Date();
+  d.setHours(0,0,0,0);
+  const daysUntilSat = (6 - d.getDay() + 7) % 7; /* 0 if today IS Saturday */
+  d.setDate(d.getDate() + daysUntilSat);
+  for(let i=0;i<n;i++){
+    const dt = new Date(d);
+    dt.setDate(d.getDate() + i*7);
+    dates.push(dt.toISOString().slice(0,10));
+  }
+  return dates;
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+async function lookupCoverageUser(){
+  const email = document.getElementById('coverage-lookup-email').value.trim().toLowerCase();
+  const errEl = document.getElementById('coverage-lookup-error');
+  errEl.classList.add('hidden');
+  if(!email){
+    errEl.textContent = 'Please enter your email.';
+    errEl.classList.remove('hidden');
+    return;
+  }
+
+  const btn = document.getElementById('coverage-lookup-btn');
+  btn.disabled = true; btn.textContent = 'Looking up...';
+
+  const formula = encodeURIComponent('AND(LOWER({Email})="' + email + '",{Status}="Active")');
+  let res = await atFetch('/' + AT_BASE_ID + '/' + AT_TABLE_STAFF + '?filterByFormula=' + formula);
+  let type = 'Staff';
+  let rec = res && res.records && res.records[0];
+  if(!rec){
+    res = await atFetch('/' + AT_BASE_ID + '/' + AT_TABLE_VOLUNTEERS + '?filterByFormula=' + formula);
+    type = 'Volunteer';
+    rec = res && res.records && res.records[0];
+  }
+
+  btn.disabled = false; btn.textContent = 'Continue';
+
+  if(!rec){
+    errEl.textContent = 'No active staff or volunteer record found for that email. Contact ACE Staff if you believe this is an error.';
+    errEl.classList.remove('hidden');
+    return;
+  }
+
+  coverageUser = { type, recordId: rec.id, name: (rec.fields && rec.fields['Full Name']) || 'You' };
+  document.getElementById('coverage-user-name').textContent = coverageUser.name;
+  showView('coverage');
+  loadCoverageSchedule();
+}
+
+async function loadCoverageSchedule(){
+  const container = document.getElementById('coverage-schedule');
+  container.innerHTML = '<p class="text-sm text-gray-500 text-center py-8">Loading schedule...</p>';
+
+  const dates = getUpcomingSaturdays(6);
+  const dateFormula = 'OR(' + dates.map(d => '{Saturday Date}="' + d + '"').join(',') + ')';
+  const res = await atFetch('/' + AT_BASE_ID + '/' + AT_TABLE_COVERAGE + '?filterByFormula=' + encodeURIComponent(dateFormula) + '&pageSize=100');
+
+  if(!res){
+    container.innerHTML = '<p class="text-sm text-red-400 text-center py-8">' + escapeHtml(atErrorMsg('Could not load the schedule.')) + '</p>';
+    return;
+  }
+
+  const records = res.records || [];
+  const byDate = {};
+  dates.forEach(d => { byDate[d] = {}; COVERAGE_SLOTS.forEach(s => byDate[d][s] = []); });
+  records.forEach(r => {
+    const f = r.fields;
+    const d = f['Saturday Date'];
+    const s = f['Slot'];
+    if(!byDate[d] || !byDate[d][s]) return;
+    const isMe = coverageUser && (
+      (coverageUser.type === 'Staff' && (f['Staff']||[]).includes(coverageUser.recordId)) ||
+      (coverageUser.type === 'Volunteer' && (f['Volunteer']||[]).includes(coverageUser.recordId))
+    );
+    byDate[d][s].push({ id: r.id, name: f['Signed Up By Name'] || '(unnamed)', isMe });
+  });
+
+  container.innerHTML = dates.map(d => {
+    const dateLabel = new Date(d + 'T00:00:00').toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
+    const rows = COVERAGE_SLOTS.map(slot => {
+      const people = byDate[d][slot];
+      const names = people.length
+        ? people.map(p => p.isMe ? ('<strong>' + escapeHtml(p.name) + ' (You)</strong>') : escapeHtml(p.name)).join(', ')
+        : '<span class="text-gray-600">No one yet</span>';
+      const mine = people.find(p => p.isMe);
+      const actionBtn = mine
+        ? '<button onclick="cancelSignup(\'' + mine.id + '\')" class="neu-btn px-3 py-1.5 rounded-lg text-[11px] text-red-400 shrink-0">Cancel</button>'
+        : '<button onclick="signUpForSlot(\'' + d + '\',\'' + slot + '\')" class="neu-btn px-3 py-1.5 rounded-lg text-[11px] neon-text-subtle shrink-0">Sign Up</button>';
+      return '<div class="flex items-center justify-between gap-3 py-2 border-b border-white/5 last:border-0">'
+        + '<div><p class="text-sm text-white">' + escapeHtml(slot) + '</p><p class="text-xs text-gray-500">' + names + '</p></div>'
+        + actionBtn
+        + '</div>';
+    }).join('');
+    return '<div class="neu-raised rounded-2xl p-5 mb-4">'
+      + '<h4 class="font-display text-sm font-bold neon-text-subtle mb-3">' + escapeHtml(dateLabel) + '</h4>'
+      + rows
+      + '</div>';
+  }).join('');
+}
+
+async function signUpForSlot(date, slot){
+  if(!coverageUser) return;
+  const fields = {
+    'Saturday Date': date,
+    'Slot': slot,
+    'Person Type': coverageUser.type,
+    'Signed Up By Name': coverageUser.name,
+    'Signed Up At': new Date().toISOString()
+  };
+  fields[coverageUser.type] = [coverageUser.recordId];
+
+  const result = await atFetch('/' + AT_BASE_ID + '/' + AT_TABLE_COVERAGE, {
+    method: 'POST',
+    body: JSON.stringify({ fields })
+  });
+  if(!result){
+    showToast(atErrorMsg('Could not sign up. Please try again.'), 'error');
+    return;
+  }
+  showToast('Signed up!', 'success');
+  loadCoverageSchedule();
+}
+
+async function cancelSignup(recordId){
+  const result = await atFetch('/' + AT_BASE_ID + '/' + AT_TABLE_COVERAGE + '/' + recordId, { method: 'DELETE' });
+  if(!result){
+    showToast(atErrorMsg('Could not cancel. Please try again.'), 'error');
+    return;
+  }
+  showToast('Signup canceled', 'success');
+  loadCoverageSchedule();
 }
 
 /* ===== Toast Notifications ===== */
