@@ -843,11 +843,24 @@ tailwind.config = {
 
 <!-- VIEW: COVERAGE SCHEDULE -->
 <main id="view-coverage" class="max-w-2xl mx-auto px-6 py-16 hidden fade-in">
-  <div class="text-center mb-8">
+  <div class="text-center mb-6">
     <h2 class="font-display text-xl font-bold text-white mb-1">Saturday Coverage Schedule</h2>
     <p class="text-sm text-gray-500">Welcome, <span id="coverage-user-name" class="neon-text-subtle"></span>. Sign up for a slot, or see who else is covering.</p>
   </div>
-  <div id="coverage-schedule"></div>
+  <div class="flex items-center justify-center gap-6 mb-6 border-b border-white/5">
+    <button id="coverage-tab-date" onclick="setCoverageViewMode('date')" class="tab-btn active font-display text-sm uppercase tracking-wider pb-3 border-b-2 border-transparent">By Date</button>
+    <button id="coverage-tab-person" onclick="setCoverageViewMode('person')" class="tab-btn font-display text-sm uppercase tracking-wider pb-3 border-b-2 border-transparent">By Person</button>
+    <button id="coverage-tab-class" onclick="setCoverageViewMode('class')" class="tab-btn font-display text-sm uppercase tracking-wider pb-3 border-b-2 border-transparent">By Class</button>
+  </div>
+  <div id="coverage-by-date-panel">
+    <div id="coverage-schedule"></div>
+  </div>
+  <div id="coverage-by-person-panel" class="hidden">
+    <div id="coverage-by-person"></div>
+  </div>
+  <div id="coverage-by-class-panel" class="hidden">
+    <div id="coverage-by-class"></div>
+  </div>
 </main>
 
 <!-- VIEW: ADMIN DASHBOARD -->
@@ -865,6 +878,14 @@ tailwind.config = {
         <button onclick="refreshAirtableData()" class="neu-btn px-3 py-1.5 rounded-lg text-[11px] neon-text-subtle" id="refresh-btn" title="Refresh from Airtable">↻ Refresh</button>
       </div></div>
     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4" id="pipeline-board"></div>
+  </div>
+  <div class="neu-raised rounded-2xl p-6 mb-6">
+    <div class="flex items-center justify-between mb-2">
+      <h3 class="font-display text-base font-bold neon-text">Coverage Schedule</h3>
+      <button onclick="loadAdminCoverageSchedule()" class="neu-btn px-3 py-1.5 rounded-lg text-[11px] neon-text-subtle" title="Refresh">↻ Refresh</button>
+    </div>
+    <p class="text-xs text-gray-500 mb-4">Add, remove, or reassign who's covering each Saturday slot. The 3-instructor cap on class slots is a self-service guardrail — you can override it here.</p>
+    <div id="admin-coverage-schedule"><p class="text-sm text-gray-500 text-center py-8">Loading...</p></div>
   </div>
   <div class="neu-raised rounded-2xl p-6 mb-6">
     <h3 class="font-display text-base font-bold neon-text mb-5">Recent Activity</h3>
@@ -955,6 +976,7 @@ function showView(view){
   if(view==='home'){backBtn.classList.add('hidden');}else{backBtn.classList.remove('hidden');}
   /* Auto-refresh dashboard */
   if(view==='dashboard'&&atToken&&allStudents.length===0)refreshAirtableData();
+  if(view==='dashboard')loadAdminCoverageSchedule();
 }
 
 /* ===== User Indicator + Sign Out ===== */
@@ -1590,7 +1612,14 @@ async function submitVolunteerApplication(){
 /* ===== Saturday Coverage Schedule (self-service sign-up + viewable calendar) ===== */
 const AT_TABLE_COVERAGE = 'tbl3DGD8ruJjlblf9';
 const COVERAGE_SLOTS = ['Falcons AM','Falcons PM','Hawks AM','Hawks PM','Eagles AM','Sparrows AM','ACE Staff'];
+/* The 6 class-specific slots cap at MAX_INSTRUCTORS_PER_CLASS Staff signups each.
+   "ACE Staff" is a general slot, not tied to one class, so it's uncapped.
+   Volunteers are never capped on any slot — the cap is an instructor-coverage limit, not a headcount limit. */
+const CLASS_SLOTS = ['Falcons AM','Falcons PM','Hawks AM','Hawks PM','Eagles AM','Sparrows AM'];
+const MAX_INSTRUCTORS_PER_CLASS = 3;
 let coverageUser = null; /* {type:'Staff'|'Volunteer', recordId, name} */
+let coverageViewMode = 'date'; /* 'date' | 'person' */
+let coverageRecordsCache = []; /* last-fetched Coverage Signups records, reused by the "By Person" view */
 
 function getUpcomingSaturdays(n){
   const dates = [];
@@ -1647,6 +1676,74 @@ async function lookupCoverageUser(){
   loadCoverageSchedule();
 }
 
+/* Shared row renderer used by both the By Date view (one card per Saturday, rows = slots)
+   and the By Class view (one card per slot, rows = Saturdays) -- same slot/date pairing,
+   just grouped in the opposite order, so the row itself is identical either way. */
+function renderCoverageRow(date, slot, people){
+  const isClassSlot = CLASS_SLOTS.indexOf(slot) !== -1;
+  const instructorCount = people.filter(p => p.type === 'Staff').length;
+  const volunteerCount = people.length - instructorCount;
+
+  const chips = people.length
+    ? people.map(p => {
+        const chipBase = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-sm mr-1 mb-1';
+        const confirmedMark = p.confirmed ? '<span class="text-green-500" title="Confirmed by text">&check;</span> ' : '';
+        return p.isMe
+          ? '<span class="' + chipBase + ' neu-inset neon-text-subtle font-semibold">' + confirmedMark + escapeHtml(p.name) + ' (You)</span>'
+          : '<span class="' + chipBase + ' neu-inset text-gray-300">' + confirmedMark + escapeHtml(p.name) + (p.type === 'Volunteer' ? ' <span class="text-gray-600">&middot; vol</span>' : '') + '</span>';
+      }).join('')
+    : '<span class="text-sm text-yellow-400">No one yet</span>';
+
+  const pips = isClassSlot
+    ? '<span class="inline-flex items-center gap-[3px] ml-2" title="' + instructorCount + ' of ' + MAX_INSTRUCTORS_PER_CLASS + ' instructor slots filled">'
+      + Array.from({length: MAX_INSTRUCTORS_PER_CLASS}).map((_, i) => {
+          const filled = i < instructorCount;
+          return '<span style="display:inline-block;width:6px;height:6px;border-radius:50%;' + (filled ? 'background:#00b4ff;box-shadow:0 0 4px rgba(0,180,255,0.6);' : 'background:#1c3155;') + '"></span>';
+        }).join('')
+      + '</span>'
+    : '';
+
+  const mine = people.find(p => p.isMe);
+  const staffFull = isClassSlot && instructorCount >= MAX_INSTRUCTORS_PER_CLASS;
+  const iAmBlockedByCap = !mine && coverageUser && coverageUser.type === 'Staff' && staffFull;
+
+  let actionBtn;
+  if(mine){
+    actionBtn = '<button onclick="cancelSignup(\'' + mine.id + '\')" class="neu-btn px-3 py-1.5 rounded-lg text-sm text-red-400 shrink-0">Cancel</button>';
+  } else if(iAmBlockedByCap){
+    actionBtn = '<span class="px-3 py-1.5 rounded-lg text-sm text-gray-600 border border-white/5 shrink-0" title="3 of 3 instructor slots are filled for this class">Full</span>';
+  } else {
+    actionBtn = '<button onclick="signUpForSlot(\'' + date + '\',\'' + slot + '\')" class="neu-btn px-3 py-1.5 rounded-lg text-sm neon-text-subtle shrink-0">Sign Up</button>';
+  }
+
+  const slotStatusDot = isClassSlot
+    ? '<span style="display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:6px;' + (instructorCount >= MAX_INSTRUCTORS_PER_CLASS ? 'background:#2f6d4f;' : instructorCount > 0 ? 'background:#c9a227;' : 'background:#5a3a3a;') + '"></span>'
+    : '';
+
+  return { html:
+    '<div class="py-3 border-b border-white/5 last:border-0">'
+      + '<div class="flex items-center justify-between gap-3 mb-1.5">'
+        + '<div class="flex items-center">' + slotStatusDot + '<p class="text-base font-medium text-white"></p>' + pips
+        + (volunteerCount ? '<span class="text-xs text-gray-500 ml-2">+' + volunteerCount + ' vol</span>' : '')
+        + '</div>'
+        + actionBtn
+      + '</div>'
+      + '<div>' + chips + '</div>'
+      + '</div>',
+    isClassSlot, instructorCount, slotStatusDot };
+}
+
+function coverageRowLabelHtml(label){
+  return '<p class="text-base font-medium text-white">' + escapeHtml(label) + '</p>';
+}
+
+/* renderCoverageRow leaves the label paragraph empty (its caller knows whether that label
+   is a slot name or a date name) -- this splices the right label back in. */
+function renderCoverageRowWithLabel(date, slot, people, label){
+  const row = renderCoverageRow(date, slot, people);
+  return row.html.replace('<p class="text-base font-medium text-white"></p>', coverageRowLabelHtml(label));
+}
+
 async function loadCoverageSchedule(){
   const container = document.getElementById('coverage-schedule');
   container.innerHTML = '<p class="text-sm text-gray-500 text-center py-8">Loading schedule...</p>';
@@ -1661,6 +1758,7 @@ async function loadCoverageSchedule(){
   }
 
   const records = res.records || [];
+  coverageRecordsCache = records;
   const byDate = {};
   dates.forEach(d => { byDate[d] = {}; COVERAGE_SLOTS.forEach(s => byDate[d][s] = []); });
   records.forEach(r => {
@@ -1668,31 +1766,96 @@ async function loadCoverageSchedule(){
     const d = f['Saturday Date'];
     const s = f['Slot'];
     if(!byDate[d] || !byDate[d][s]) return;
+    const type = f['Person Type'] || 'Staff';
     const isMe = coverageUser && (
       (coverageUser.type === 'Staff' && (f['Staff']||[]).includes(coverageUser.recordId)) ||
       (coverageUser.type === 'Volunteer' && (f['Volunteer']||[]).includes(coverageUser.recordId))
     );
-    byDate[d][s].push({ id: r.id, name: f['Signed Up By Name'] || '(unnamed)', isMe });
+    byDate[d][s].push({ id: r.id, name: f['Signed Up By Name'] || '(unnamed)', type, isMe, confirmed: !!f['Confirmed'] });
   });
 
-  container.innerHTML = dates.map(d => {
-    const dateLabel = new Date(d + 'T00:00:00').toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
+  container.innerHTML = dates.map((d, dateIdx) => {
+    const dateObj = new Date(d + 'T00:00:00');
+    const dateLabel = dateObj.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
+    const isNext = dateIdx === 0;
+    let openSlotCount = 0;
+
     const rows = COVERAGE_SLOTS.map(slot => {
       const people = byDate[d][slot];
-      const names = people.length
-        ? people.map(p => p.isMe ? ('<strong>' + escapeHtml(p.name) + ' (You)</strong>') : escapeHtml(p.name)).join(', ')
-        : '<span class="text-gray-600">No one yet</span>';
-      const mine = people.find(p => p.isMe);
-      const actionBtn = mine
-        ? '<button onclick="cancelSignup(\'' + mine.id + '\')" class="neu-btn px-3 py-1.5 rounded-lg text-[11px] text-red-400 shrink-0">Cancel</button>'
-        : '<button onclick="signUpForSlot(\'' + d + '\',\'' + slot + '\')" class="neu-btn px-3 py-1.5 rounded-lg text-[11px] neon-text-subtle shrink-0">Sign Up</button>';
-      return '<div class="flex items-center justify-between gap-3 py-2 border-b border-white/5 last:border-0">'
-        + '<div><p class="text-sm text-white">' + escapeHtml(slot) + '</p><p class="text-xs text-gray-500">' + names + '</p></div>'
-        + actionBtn
-        + '</div>';
+      const isClassSlot = CLASS_SLOTS.indexOf(slot) !== -1;
+      const instructorCount = people.filter(p => p.type === 'Staff').length;
+      if(isClassSlot && instructorCount < MAX_INSTRUCTORS_PER_CLASS) openSlotCount++;
+      return renderCoverageRowWithLabel(d, slot, people, slot);
     }).join('');
+
+    const badge = isNext
+      ? '<span class="text-xs font-semibold px-2 py-0.5 rounded-full neu-inset neon-text-subtle uppercase tracking-wider ml-2">This Week</span>'
+      : '';
+    const coverageNote = openSlotCount > 0
+      ? '<span class="text-sm text-gray-500">' + openSlotCount + ' class' + (openSlotCount === 1 ? '' : 'es') + ' still need an instructor</span>'
+      : '<span class="text-sm" style="color:#2f6d4f">All classes have an instructor</span>';
+
+    return '<div class="neu-raised rounded-2xl p-5 mb-4' + (isNext ? '' : '') + '"' + (isNext ? ' style="border:1px solid rgba(0,180,255,0.25)"' : '') + '>'
+      + '<div class="flex items-center justify-between mb-1">'
+        + '<h4 class="font-display text-base font-bold neon-text-subtle flex items-center">' + escapeHtml(dateLabel) + badge + '</h4>'
+      + '</div>'
+      + '<div class="mb-3">' + coverageNote + '</div>'
+      + rows
+      + '</div>';
+  }).join('');
+}
+
+async function loadCoverageByClass(){
+  const container = document.getElementById('coverage-by-class');
+  container.innerHTML = '<p class="text-sm text-gray-500 text-center py-8">Loading schedule...</p>';
+
+  const dates = getUpcomingSaturdays(6);
+  const dateFormula = 'OR(' + dates.map(d => '{Saturday Date}="' + d + '"').join(',') + ')';
+  const res = await atFetch('/' + AT_BASE_ID + '/' + AT_TABLE_COVERAGE + '?filterByFormula=' + encodeURIComponent(dateFormula) + '&pageSize=100');
+
+  if(!res){
+    container.innerHTML = '<p class="text-sm text-red-400 text-center py-8">' + escapeHtml(atErrorMsg('Could not load the schedule.')) + '</p>';
+    return;
+  }
+
+  const records = res.records || [];
+  coverageRecordsCache = records;
+  const bySlot = {};
+  COVERAGE_SLOTS.forEach(s => { bySlot[s] = {}; dates.forEach(d => bySlot[s][d] = []); });
+  records.forEach(r => {
+    const f = r.fields;
+    const d = f['Saturday Date'];
+    const s = f['Slot'];
+    if(!bySlot[s] || !bySlot[s][d]) return;
+    const type = f['Person Type'] || 'Staff';
+    const isMe = coverageUser && (
+      (coverageUser.type === 'Staff' && (f['Staff']||[]).includes(coverageUser.recordId)) ||
+      (coverageUser.type === 'Volunteer' && (f['Volunteer']||[]).includes(coverageUser.recordId))
+    );
+    bySlot[s][d].push({ id: r.id, name: f['Signed Up By Name'] || '(unnamed)', type, isMe, confirmed: !!f['Confirmed'] });
+  });
+
+  container.innerHTML = COVERAGE_SLOTS.map(slot => {
+    const isClassSlot = CLASS_SLOTS.indexOf(slot) !== -1;
+    let openCount = 0;
+
+    const rows = dates.map((d, dateIdx) => {
+      const people = bySlot[slot][d];
+      const instructorCount = people.filter(p => p.type === 'Staff').length;
+      if(isClassSlot && instructorCount < MAX_INSTRUCTORS_PER_CLASS) openCount++;
+      const dateLabel = new Date(d + 'T00:00:00').toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' }) + (dateIdx === 0 ? ' (This Week)' : '');
+      return renderCoverageRowWithLabel(d, slot, people, dateLabel);
+    }).join('');
+
+    const capNote = isClassSlot
+      ? (openCount > 0
+          ? '<span class="text-sm text-gray-500">Needs an instructor on ' + openCount + ' of the next ' + dates.length + ' Saturdays</span>'
+          : '<span class="text-sm" style="color:#2f6d4f">Fully staffed for the next ' + dates.length + ' Saturdays</span>')
+      : '<span class="text-sm text-gray-500">General slot &mdash; no instructor cap</span>';
+
     return '<div class="neu-raised rounded-2xl p-5 mb-4">'
-      + '<h4 class="font-display text-sm font-bold neon-text-subtle mb-3">' + escapeHtml(dateLabel) + '</h4>'
+      + '<h4 class="font-display text-base font-bold neon-text-subtle mb-1">' + escapeHtml(slot) + '</h4>'
+      + '<div class="mb-3">' + capNote + '</div>'
       + rows
       + '</div>';
   }).join('');
@@ -1700,6 +1863,21 @@ async function loadCoverageSchedule(){
 
 async function signUpForSlot(date, slot){
   if(!coverageUser) return;
+
+  /* Defense in depth: the button should already be hidden/disabled once a class slot's
+     instructor cap is reached, but re-check against the last-fetched data before writing,
+     in case two people raced to sign up around the same refresh. */
+  if(coverageUser.type === 'Staff' && CLASS_SLOTS.indexOf(slot) !== -1){
+    const instructorCount = coverageRecordsCache.filter(r =>
+      r.fields['Saturday Date'] === date && r.fields['Slot'] === slot && (r.fields['Person Type'] || 'Staff') === 'Staff'
+    ).length;
+    if(instructorCount >= MAX_INSTRUCTORS_PER_CLASS){
+      showToast('That class already has ' + MAX_INSTRUCTORS_PER_CLASS + ' instructors signed up. Refreshing the schedule...', 'error');
+      loadCoverageSchedule();
+      return;
+    }
+  }
+
   const fields = {
     'Saturday Date': date,
     'Slot': slot,
@@ -1718,7 +1896,7 @@ async function signUpForSlot(date, slot){
     return;
   }
   showToast('Signed up!', 'success');
-  loadCoverageSchedule();
+  refreshCoverageView();
 }
 
 async function cancelSignup(recordId){
@@ -1728,7 +1906,225 @@ async function cancelSignup(recordId){
     return;
   }
   showToast('Signup canceled', 'success');
-  loadCoverageSchedule();
+  refreshCoverageView();
+}
+
+function refreshCoverageView(){
+  if(coverageViewMode === 'person') loadCoverageByPerson();
+  else if(coverageViewMode === 'class') loadCoverageByClass();
+  else loadCoverageSchedule();
+}
+
+function setCoverageViewMode(mode){
+  coverageViewMode = mode;
+  const dateTab = document.getElementById('coverage-tab-date');
+  const personTab = document.getElementById('coverage-tab-person');
+  const classTab = document.getElementById('coverage-tab-class');
+  if(dateTab && personTab && classTab){
+    dateTab.classList.toggle('active', mode === 'date');
+    personTab.classList.toggle('active', mode === 'person');
+    classTab.classList.toggle('active', mode === 'class');
+  }
+  document.getElementById('coverage-by-date-panel').classList.toggle('hidden', mode !== 'date');
+  document.getElementById('coverage-by-person-panel').classList.toggle('hidden', mode !== 'person');
+  document.getElementById('coverage-by-class-panel').classList.toggle('hidden', mode !== 'class');
+  refreshCoverageView();
+}
+
+async function loadCoverageByPerson(){
+  const container = document.getElementById('coverage-by-person');
+  container.innerHTML = '<p class="text-sm text-gray-500 text-center py-8">Loading schedule...</p>';
+
+  const dates = getUpcomingSaturdays(6);
+  const dateFormula = 'OR(' + dates.map(d => '{Saturday Date}="' + d + '"').join(',') + ')';
+  const res = await atFetch('/' + AT_BASE_ID + '/' + AT_TABLE_COVERAGE + '?filterByFormula=' + encodeURIComponent(dateFormula) + '&pageSize=100');
+
+  if(!res){
+    container.innerHTML = '<p class="text-sm text-red-400 text-center py-8">' + escapeHtml(atErrorMsg('Could not load the schedule.')) + '</p>';
+    return;
+  }
+
+  const records = res.records || [];
+  coverageRecordsCache = records;
+  const dateLabels = {};
+  dates.forEach(d => { dateLabels[d] = new Date(d + 'T00:00:00').toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' }); });
+
+  /* Group by person name (not by linked record, so Staff and Volunteers sort into the same list). */
+  const byPerson = {};
+  records.forEach(r => {
+    const f = r.fields;
+    if(!dateLabels[f['Saturday Date']]) return;
+    const name = f['Signed Up By Name'] || '(unnamed)';
+    const type = f['Person Type'] || 'Staff';
+    const isMe = coverageUser && (
+      (coverageUser.type === 'Staff' && (f['Staff']||[]).includes(coverageUser.recordId)) ||
+      (coverageUser.type === 'Volunteer' && (f['Volunteer']||[]).includes(coverageUser.recordId))
+    );
+    const key = name + '|' + type;
+    if(!byPerson[key]) byPerson[key] = { name, type, isMe, entries: [] };
+    byPerson[key].entries.push({ id: r.id, date: f['Saturday Date'], slot: f['Slot'], confirmed: !!f['Confirmed'] });
+  });
+
+  const people = Object.values(byPerson).sort((a, b) => {
+    if(a.isMe !== b.isMe) return a.isMe ? -1 : 1;
+    return a.name.localeCompare(b.name);
+  });
+  people.forEach(p => p.entries.sort((a, b) => a.date.localeCompare(b.date)));
+
+  if(!people.length){
+    container.innerHTML = '<p class="text-sm text-gray-500 text-center py-8">No one has signed up for an upcoming Saturday yet.</p>';
+    return;
+  }
+
+  container.innerHTML = people.map(p => {
+    const rows = p.entries.map(e =>
+      '<div class="flex items-center justify-between gap-3 py-1.5 border-b border-white/5 last:border-0">'
+        + '<span class="text-sm text-gray-300">' + (e.confirmed ? '<span class="text-green-500" title="Confirmed by text">&check;</span> ' : '') + escapeHtml(dateLabels[e.date] || e.date) + '</span>'
+        + '<span class="text-sm neon-text-subtle">' + escapeHtml(e.slot) + '</span>'
+        + (p.isMe ? '<button onclick="cancelSignup(\'' + e.id + '\')" class="text-xs text-red-400 hover:text-red-300 shrink-0">Cancel</button>' : '<span></span>')
+      + '</div>'
+    ).join('');
+    const typeTag = p.type === 'Volunteer'
+      ? '<span class="text-xs text-gray-500 ml-2">volunteer</span>'
+      : '<span class="text-xs text-gray-500 ml-2">staff</span>';
+    return '<div class="neu-raised rounded-2xl p-5 mb-4">'
+      + '<div class="flex items-center justify-between mb-3">'
+        + '<h4 class="font-display text-base font-bold ' + (p.isMe ? 'neon-text-subtle' : 'text-white') + '">' + escapeHtml(p.name) + (p.isMe ? ' (You)' : '') + '</h4>'
+        + '<div class="flex items-center">' + typeTag + '<span class="text-xs text-gray-600 ml-2">' + p.entries.length + ' Saturday' + (p.entries.length === 1 ? '' : 's') + '</span></div>'
+      + '</div>'
+      + rows
+      + '</div>';
+  }).join('');
+}
+
+/* ===== Admin Coverage Schedule Management (dashboard only, requires adminAuthenticated) =====
+   Lets a logged-in Administrator add, remove, or reassign anyone's Saturday coverage signup,
+   for any Active Staff or Volunteer -- not just their own. Can override the 3-instructor cap. */
+let adminActivePeople = []; /* [{key:'Staff|recId', type, recordId, name}] */
+
+async function loadAdminCoverageSchedule(){
+  if(!adminAuthenticated) return;
+  const container = document.getElementById('admin-coverage-schedule');
+  if(!container) return;
+  container.innerHTML = '<p class="text-sm text-gray-500 text-center py-8">Loading...</p>';
+
+  const [staffRes, volRes] = await Promise.all([
+    atFetch('/' + AT_BASE_ID + '/' + AT_TABLE_STAFF + '?filterByFormula=' + encodeURIComponent("{Status}='Active'") + '&pageSize=100'),
+    atFetch('/' + AT_BASE_ID + '/' + AT_TABLE_VOLUNTEERS + '?filterByFormula=' + encodeURIComponent("{Status}='Active'") + '&pageSize=100'),
+  ]);
+
+  adminActivePeople = [
+    ...((staffRes && staffRes.records) || []).map(r => ({ key: 'Staff|' + r.id, type: 'Staff', recordId: r.id, name: r.fields['Full Name'] || '(unnamed)' })),
+    ...((volRes && volRes.records) || []).map(r => ({ key: 'Volunteer|' + r.id, type: 'Volunteer', recordId: r.id, name: r.fields['Full Name'] || '(unnamed)' })),
+  ];
+  adminActivePeople.sort((a, b) => a.name.localeCompare(b.name));
+
+  const dates = getUpcomingSaturdays(6);
+  const dateFormula = 'OR(' + dates.map(d => '{Saturday Date}="' + d + '"').join(',') + ')';
+  const res = await atFetch('/' + AT_BASE_ID + '/' + AT_TABLE_COVERAGE + '?filterByFormula=' + encodeURIComponent(dateFormula) + '&pageSize=100');
+  if(!res){
+    container.innerHTML = '<p class="text-sm text-red-400 text-center py-8">' + escapeHtml(atErrorMsg('Could not load the schedule.')) + '</p>';
+    return;
+  }
+
+  const records = res.records || [];
+  const byDate = {};
+  dates.forEach(d => { byDate[d] = {}; COVERAGE_SLOTS.forEach(s => byDate[d][s] = []); });
+  records.forEach(r => {
+    const f = r.fields;
+    const d = f['Saturday Date'], s = f['Slot'];
+    if(!byDate[d] || !byDate[d][s]) return;
+    byDate[d][s].push({ id: r.id, name: f['Signed Up By Name'] || '(unnamed)', type: f['Person Type'] || 'Staff', confirmed: !!f['Confirmed'] });
+  });
+
+  const peopleOptions = adminActivePeople.map(p =>
+    '<option value="' + escapeHtml(p.key) + '">' + escapeHtml(p.name) + ' (' + p.type + ')</option>'
+  ).join('');
+
+  container.innerHTML = dates.map((d, dateIdx) => {
+    const dateLabel = new Date(d + 'T00:00:00').toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
+    const rows = COVERAGE_SLOTS.map((slot, slotIdx) => {
+      const people = byDate[d][slot];
+      const isClassSlot = CLASS_SLOTS.indexOf(slot) !== -1;
+      const instructorCount = people.filter(p => p.type === 'Staff').length;
+      const overCap = isClassSlot && instructorCount >= MAX_INSTRUCTORS_PER_CLASS;
+
+      const chips = people.length
+        ? people.map(p =>
+            '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm mr-1 mb-1 neu-inset text-gray-300">'
+              + (p.confirmed ? '<span class="text-green-500" title="Confirmed by text">&check;</span>' : '')
+              + escapeHtml(p.name) + (p.type === 'Volunteer' ? ' <span class="text-gray-600">&middot; vol</span>' : '')
+              + '<button onclick="adminRemoveSignup(\'' + p.id + '\')" class="text-red-400 hover:text-red-300 font-bold" title="Remove">&times;</button>'
+            + '</span>'
+          ).join('')
+        : '<span class="text-sm text-yellow-400">No one yet</span>';
+
+      const selectId = 'admin-add-select-' + dateIdx + '-' + slotIdx;
+      const addControl = '<div class="flex items-center gap-1.5 mt-1.5">'
+        + '<select id="' + selectId + '" class="neu-input text-sm px-2 py-1 rounded-lg" style="max-width:180px">'
+          + '<option value="">Add someone...</option>' + peopleOptions
+        + '</select>'
+        + '<button onclick="adminAddSignup(\'' + d + '\',\'' + slot + '\',\'' + selectId + '\',' + overCap + ')" class="neu-btn px-2.5 py-1 rounded-lg text-sm neon-text-subtle shrink-0">Add</button>'
+      + '</div>';
+
+      const capWarning = overCap ? '<span class="text-xs ml-2" style="color:#c9a227">at cap (' + MAX_INSTRUCTORS_PER_CLASS + ')</span>' : '';
+
+      return '<div class="py-3 border-b border-white/5 last:border-0">'
+        + '<div class="flex items-center mb-1"><p class="text-base font-medium text-white">' + escapeHtml(slot) + '</p>' + capWarning + '</div>'
+        + '<div>' + chips + '</div>'
+        + addControl
+        + '</div>';
+    }).join('');
+    return '<details class="mb-2" ' + (dateIdx === 0 ? 'open' : '') + '>'
+      + '<summary class="font-display text-base font-bold neon-text-subtle cursor-pointer py-2">' + escapeHtml(dateLabel) + '</summary>'
+      + '<div class="pl-1">' + rows + '</div>'
+      + '</details>';
+  }).join('');
+}
+
+async function adminRemoveSignup(recordId){
+  const result = await atFetch('/' + AT_BASE_ID + '/' + AT_TABLE_COVERAGE + '/' + recordId, { method: 'DELETE' });
+  if(!result){
+    showToast(atErrorMsg('Could not remove that signup. Please try again.'), 'error');
+    return;
+  }
+  showToast('Removed', 'success');
+  loadAdminCoverageSchedule();
+}
+
+async function adminAddSignup(date, slot, selectId, overCap){
+  const select = document.getElementById(selectId);
+  const key = select && select.value;
+  if(!key){
+    showToast('Choose someone to add first.', 'error');
+    return;
+  }
+  const person = adminActivePeople.find(p => p.key === key);
+  if(!person) return;
+
+  if(overCap && person.type === 'Staff'){
+    if(!confirm('This class already has ' + MAX_INSTRUCTORS_PER_CLASS + ' instructors signed up. Add ' + person.name + ' anyway?')) return;
+  }
+
+  const fields = {
+    'Saturday Date': date,
+    'Slot': slot,
+    'Person Type': person.type,
+    'Signed Up By Name': person.name,
+    'Signed Up At': new Date().toISOString()
+  };
+  fields[person.type] = [person.recordId];
+
+  const result = await atFetch('/' + AT_BASE_ID + '/' + AT_TABLE_COVERAGE, {
+    method: 'POST',
+    body: JSON.stringify({ fields })
+  });
+  if(!result){
+    showToast(atErrorMsg('Could not add that signup. Please try again.'), 'error');
+    return;
+  }
+  showToast(person.name + ' added to ' + slot, 'success');
+  loadAdminCoverageSchedule();
 }
 
 /* ===== Toast Notifications ===== */

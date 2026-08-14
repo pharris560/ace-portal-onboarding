@@ -5,9 +5,17 @@ const AT_TABLE_STAFF = 'tblylF50qyHNtKHLH';
 const AT_TABLE_VOLUNTEERS = 'tbltf83MZS1TEE6Kt';
 const AT_TABLE_COVERAGE = 'tbl3DGD8ruJjlblf9';
 
-async function stubNetwork(page, { staffRecord = null, volunteerRecord = null } = {}) {
+function nextSaturdayISO() {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  const days = (6 - d.getDay() + 7) % 7;
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+async function stubNetwork(page, { staffRecord = null, volunteerRecord = null, signups: initialSignups = [] } = {}) {
   const jsonBody = (o) => ({ status: 200, contentType: 'application/json', body: JSON.stringify(o) });
-  let signups = []; // in-memory Coverage Signups, mutated by POST/DELETE
+  let signups = initialSignups.slice(); // in-memory Coverage Signups, mutated by POST/DELETE
   let nextId = 1;
 
   await page.route('**/.netlify/functions/airtable\\?**', async (route) => {
@@ -97,4 +105,124 @@ test('coverage schedule: volunteer lookup works the same as staff (checks both t
 
   await expect(page.locator('#view-coverage')).toBeVisible();
   await expect(page.locator('#coverage-user-name')).toHaveText('Sam Lee');
+});
+
+test('capacity: a class slot with 3 instructors already shows Full and blocks a 4th', async ({ page }) => {
+  const errors = [];
+  page.on('pageerror', (e) => { if (!/tailwind is not defined/.test(String(e))) errors.push(String(e)); });
+
+  const date = nextSaturdayISO();
+  const preSignups = [1, 2, 3].map((i) => ({
+    id: 'recEXIST' + i,
+    fields: { 'Saturday Date': date, Slot: 'Falcons AM', 'Person Type': 'Staff', 'Signed Up By Name': 'Existing Instructor ' + i, Staff: ['recOTHER' + i] },
+  }));
+
+  await stubNetwork(page, {
+    staffRecord: { id: 'recSTAFF1', fields: { 'Full Name': 'Taylor Morgan', Email: 'taylor@example.com', Status: 'Active' } },
+    signups: preSignups,
+  });
+  await page.goto('/index.html');
+  await page.locator('button', { hasText: 'View / Sign Up for Saturday Schedule' }).click();
+  await page.fill('#coverage-lookup-email', 'taylor@example.com');
+  await page.click('#coverage-lookup-btn');
+  await expect(page.locator('#view-coverage')).toBeVisible();
+
+  const firstCard = page.locator('#coverage-schedule > div').first();
+  await expect(firstCard).toContainText('Falcons AM');
+  await expect(firstCard).toContainText('Full');
+  await expect(firstCard).toContainText('Existing Instructor 1');
+  await expect(firstCard).toContainText('Existing Instructor 3');
+
+  expect(errors, 'no uncaught page errors').toEqual([]);
+});
+
+test('capacity: a class slot with 2 instructors + 1 volunteer still allows a 3rd instructor, volunteers stay uncapped', async ({ page }) => {
+  const date = nextSaturdayISO();
+  const preSignups = [
+    { id: 'recEXIST1', fields: { 'Saturday Date': date, Slot: 'Hawks PM', 'Person Type': 'Staff', 'Signed Up By Name': 'Instructor One', Staff: ['recOTHER1'] } },
+    { id: 'recEXIST2', fields: { 'Saturday Date': date, Slot: 'Hawks PM', 'Person Type': 'Staff', 'Signed Up By Name': 'Instructor Two', Staff: ['recOTHER2'] } },
+    { id: 'recEXIST3', fields: { 'Saturday Date': date, Slot: 'Hawks PM', 'Person Type': 'Volunteer', 'Signed Up By Name': 'Vol Person', Volunteer: ['recVOLOTHER'] } },
+  ];
+
+  await stubNetwork(page, {
+    staffRecord: { id: 'recSTAFF2', fields: { 'Full Name': 'Jordan Ray', Email: 'jordan@example.com', Status: 'Active' } },
+    signups: preSignups,
+  });
+  await page.goto('/index.html');
+  await page.locator('button', { hasText: 'View / Sign Up for Saturday Schedule' }).click();
+  await page.fill('#coverage-lookup-email', 'jordan@example.com');
+  await page.click('#coverage-lookup-btn');
+  await expect(page.locator('#view-coverage')).toBeVisible();
+
+  const firstCard = page.locator('#coverage-schedule > div').first();
+  await expect(firstCard).toContainText('+1 vol');
+  await expect(firstCard).not.toContainText('Full');
+
+  const hawksRow = firstCard.locator('div.py-3', { hasText: 'Hawks PM' });
+  await hawksRow.locator('button', { hasText: 'Sign Up' }).click();
+  await expect(firstCard.getByText('Jordan Ray (You)')).toBeVisible({ timeout: 10000 });
+  await expect(hawksRow).toContainText('Cancel');
+  await expect(hawksRow).not.toContainText('Sign Up');
+});
+
+test('by-person view: groups signups by name, shows dates+slots, allows canceling own', async ({ page }) => {
+  const date = nextSaturdayISO();
+  const preSignups = [
+    { id: 'recA', fields: { 'Saturday Date': date, Slot: 'Sparrows AM', 'Person Type': 'Staff', 'Signed Up By Name': 'Alex Instructor', Staff: ['recSTAFF3'] } },
+  ];
+
+  await stubNetwork(page, {
+    staffRecord: { id: 'recSTAFF3', fields: { 'Full Name': 'Alex Instructor', Email: 'alex@example.com', Status: 'Active' } },
+    signups: preSignups,
+  });
+  await page.goto('/index.html');
+  await page.locator('button', { hasText: 'View / Sign Up for Saturday Schedule' }).click();
+  await page.fill('#coverage-lookup-email', 'alex@example.com');
+  await page.click('#coverage-lookup-btn');
+  await expect(page.locator('#view-coverage')).toBeVisible();
+
+  await page.click('#coverage-tab-person');
+  await expect(page.locator('#coverage-by-person-panel')).toBeVisible();
+  await expect(page.locator('#coverage-by-date-panel')).toBeHidden();
+  await expect(page.locator('#coverage-by-person')).toContainText('Alex Instructor (You)');
+  await expect(page.locator('#coverage-by-person')).toContainText('Sparrows AM');
+
+  await page.locator('#coverage-by-person button', { hasText: 'Cancel' }).click();
+  await expect(page.locator('#coverage-by-person')).toContainText('No one has signed up', { timeout: 10000 });
+});
+
+test('by-class view: one card per slot, each listing the next 6 Saturdays, sign up works from here too', async ({ page }) => {
+  const date = nextSaturdayISO();
+  const preSignups = [
+    { id: 'recA', fields: { 'Saturday Date': date, Slot: 'Eagles AM', 'Person Type': 'Staff', 'Signed Up By Name': 'Instructor One', Staff: ['recOTHER1'] } },
+  ];
+
+  await stubNetwork(page, {
+    staffRecord: { id: 'recSTAFF4', fields: { 'Full Name': 'Robin Casey', Email: 'robin@example.com', Status: 'Active' } },
+    signups: preSignups,
+  });
+  await page.goto('/index.html');
+  await page.locator('button', { hasText: 'View / Sign Up for Saturday Schedule' }).click();
+  await page.fill('#coverage-lookup-email', 'robin@example.com');
+  await page.click('#coverage-lookup-btn');
+  await expect(page.locator('#view-coverage')).toBeVisible();
+
+  await page.click('#coverage-tab-class');
+  await expect(page.locator('#coverage-by-class-panel')).toBeVisible();
+  await expect(page.locator('#coverage-by-date-panel')).toBeHidden();
+
+  // 7 slot cards, one per COVERAGE_SLOTS entry.
+  await expect(page.locator('#coverage-by-class > div')).toHaveCount(7);
+
+  const eaglesCard = page.locator('#coverage-by-class > div', { hasText: 'Eagles AM' }).first();
+  await expect(eaglesCard).toContainText('Instructor One');
+  await expect(eaglesCard).toContainText('Needs an instructor on');
+
+  // Sign up from the By Class view on a still-open Saturday row.
+  await eaglesCard.locator('button', { hasText: 'Sign Up' }).first().click();
+  await expect(eaglesCard.getByText('Robin Casey (You)')).toBeVisible({ timeout: 10000 });
+
+  // General slot (ACE Staff) should say it has no cap, not a Saturdays-needing-coverage count.
+  const staffCard = page.locator('#coverage-by-class > div', { hasText: 'ACE Staff' }).first();
+  await expect(staffCard).toContainText('no instructor cap');
 });
