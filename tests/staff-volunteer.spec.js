@@ -40,6 +40,7 @@ test('staff application: fill → submit → confirmation, writes Pending to Sta
   await page.fill('#staff-phone', '555-123-4567');
   await page.selectOption('#staff-role', 'Instructor');
   await page.fill('#staff-notes', 'CFI, 5 years teaching experience.');
+  await page.check('#staff-sms-optin');
   await page.click('#staff-apply-btn');
 
   await expect(page.locator('#staff-apply-success')).toBeVisible({ timeout: 10000 });
@@ -52,6 +53,8 @@ test('staff application: fill → submit → confirmation, writes Pending to Sta
   expect(capture.body.fields['Role']).toBe('Instructor');
   expect(capture.body.fields['Status']).toBe('Pending');
   expect(capture.body.fields['Application Date']).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  expect(capture.body.fields['SMS Opt-In']).toBe(true);
+  expect(capture.body.fields['SMS Opt-In Date']).toMatch(/^\d{4}-\d{2}-\d{2}T/);
 
   expect(errors, 'no uncaught page errors').toEqual([]);
 });
@@ -70,6 +73,7 @@ test('volunteer application: fill → submit → confirmation, writes Pending to
   await page.fill('#volunteer-email', 'sam@example.com');
   await page.fill('#volunteer-phone', '555-987-6543');
   await page.fill('#volunteer-availability', 'Saturdays AM');
+  await page.check('#volunteer-sms-optin');
   await page.click('#volunteer-apply-btn');
 
   await expect(page.locator('#volunteer-apply-success')).toBeVisible({ timeout: 10000 });
@@ -79,6 +83,8 @@ test('volunteer application: fill → submit → confirmation, writes Pending to
   expect(capture.body.fields['Full Name']).toBe('Sam Lee');
   expect(capture.body.fields['Availability Notes']).toBe('Saturdays AM');
   expect(capture.body.fields['Status']).toBe('Pending');
+  expect(capture.body.fields['SMS Opt-In']).toBe(true);
+  expect(capture.body.fields['SMS Opt-In Date']).toMatch(/^\d{4}-\d{2}-\d{2}T/);
 
   expect(errors, 'no uncaught page errors').toEqual([]);
 });
@@ -92,6 +98,23 @@ test('validation: submitting with missing fields shows an error, does not call A
   await page.click('#staff-apply-btn');
 
   await expect(page.locator('#staff-apply-error')).toBeVisible();
+  await expect(page.locator('#staff-apply-success')).toBeHidden();
+  expect(capture.path).toBeUndefined();
+});
+
+test('validation: submitting without SMS opt-in checked shows an error, does not call Airtable', async ({ page }) => {
+  const capture = {};
+  await stubNetwork(page, capture);
+  await page.goto('/index.html');
+
+  await page.locator('button', { hasText: 'Apply for a Staff Position' }).click();
+  await page.fill('#staff-name', 'Jordan Reed');
+  await page.fill('#staff-email', 'jordan@example.com');
+  await page.fill('#staff-phone', '555-123-4567');
+  await page.click('#staff-apply-btn');
+
+  await expect(page.locator('#staff-apply-error')).toBeVisible();
+  await expect(page.locator('#staff-apply-error')).toContainText('SMS');
   await expect(page.locator('#staff-apply-success')).toBeHidden();
   expect(capture.path).toBeUndefined();
 });

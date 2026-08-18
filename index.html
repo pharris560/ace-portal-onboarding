@@ -779,6 +779,7 @@ tailwind.config = {
         </select>
       </div>
       <div><label class="block text-xs font-medium text-gray-400 mb-1.5 tracking-wide uppercase">Tell us about yourself <span class="text-gray-600 normal-case">(optional)</span></label><textarea id="staff-notes" rows="4" class="neu-input w-full px-4 py-3 rounded-xl text-sm" placeholder="Relevant experience, availability, etc."></textarea></div>
+      <label class="flex items-start gap-2.5 cursor-pointer"><input type="checkbox" id="staff-sms-optin" class="mt-0.5 flex-shrink-0"><span class="text-xs text-gray-400 leading-relaxed">I agree to receive SMS text messages from ACE (Aviation Career Enrichment) about Saturday coverage scheduling and confirmations. Message frequency varies. Msg &amp; data rates may apply. Reply STOP to opt out, HELP for help.</span></label>
       <p id="staff-apply-error" class="text-xs text-red-400 hidden"></p>
       <button onclick="submitStaffApplication()" id="staff-apply-btn" class="neu-btn-primary w-full py-3 rounded-xl text-sm font-display tracking-wide">Submit Application</button>
     </div>
@@ -809,6 +810,7 @@ tailwind.config = {
       <div><label class="block text-xs font-medium text-gray-400 mb-1.5 tracking-wide uppercase">Phone</label><input type="tel" id="volunteer-phone" class="neu-input w-full px-4 py-3 rounded-xl text-sm" placeholder="(555) 555-5555"></div>
       <div><label class="block text-xs font-medium text-gray-400 mb-1.5 tracking-wide uppercase">Availability</label><textarea id="volunteer-availability" rows="3" class="neu-input w-full px-4 py-3 rounded-xl text-sm" placeholder="e.g. Saturdays AM, occasional events"></textarea></div>
       <div><label class="block text-xs font-medium text-gray-400 mb-1.5 tracking-wide uppercase">Tell us about yourself <span class="text-gray-600 normal-case">(optional)</span></label><textarea id="volunteer-notes" rows="4" class="neu-input w-full px-4 py-3 rounded-xl text-sm" placeholder="Why you'd like to volunteer, relevant experience, etc."></textarea></div>
+      <label class="flex items-start gap-2.5 cursor-pointer"><input type="checkbox" id="volunteer-sms-optin" class="mt-0.5 flex-shrink-0"><span class="text-xs text-gray-400 leading-relaxed">I agree to receive SMS text messages from ACE (Aviation Career Enrichment) about Saturday coverage scheduling and confirmations. Message frequency varies. Msg &amp; data rates may apply. Reply STOP to opt out, HELP for help.</span></label>
       <p id="volunteer-apply-error" class="text-xs text-red-400 hidden"></p>
       <button onclick="submitVolunteerApplication()" id="volunteer-apply-btn" class="neu-btn-primary w-full py-3 rounded-xl text-sm font-display tracking-wide">Submit Application</button>
     </div>
@@ -1529,11 +1531,17 @@ async function submitStaffApplication(){
   const phone = document.getElementById('staff-phone').value.trim();
   const role = document.getElementById('staff-role').value;
   const notes = document.getElementById('staff-notes').value.trim();
+  const smsOptIn = document.getElementById('staff-sms-optin').checked;
   const errEl = document.getElementById('staff-apply-error');
   errEl.classList.add('hidden');
 
   if(!name || !email || !phone){
     errEl.textContent = 'Please fill in your name, email, and phone number.';
+    errEl.classList.remove('hidden');
+    return;
+  }
+  if(!smsOptIn){
+    errEl.textContent = 'Please agree to receive SMS text messages to continue.';
     errEl.classList.remove('hidden');
     return;
   }
@@ -1550,7 +1558,9 @@ async function submitStaffApplication(){
       'Role': role,
       'Notes': notes,
       'Status': 'Pending',
-      'Application Date': new Date().toISOString().slice(0,10)
+      'Application Date': new Date().toISOString().slice(0,10),
+      'SMS Opt-In': true,
+      'SMS Opt-In Date': new Date().toISOString()
     }})
   });
 
@@ -1572,11 +1582,17 @@ async function submitVolunteerApplication(){
   const phone = document.getElementById('volunteer-phone').value.trim();
   const availability = document.getElementById('volunteer-availability').value.trim();
   const notes = document.getElementById('volunteer-notes').value.trim();
+  const smsOptIn = document.getElementById('volunteer-sms-optin').checked;
   const errEl = document.getElementById('volunteer-apply-error');
   errEl.classList.add('hidden');
 
   if(!name || !email || !phone){
     errEl.textContent = 'Please fill in your name, email, and phone number.';
+    errEl.classList.remove('hidden');
+    return;
+  }
+  if(!smsOptIn){
+    errEl.textContent = 'Please agree to receive SMS text messages to continue.';
     errEl.classList.remove('hidden');
     return;
   }
@@ -1593,7 +1609,9 @@ async function submitVolunteerApplication(){
       'Availability Notes': availability,
       'Notes': notes,
       'Status': 'Pending',
-      'Application Date': new Date().toISOString().slice(0,10)
+      'Application Date': new Date().toISOString().slice(0,10),
+      'SMS Opt-In': true,
+      'SMS Opt-In Date': new Date().toISOString()
     }})
   });
 
