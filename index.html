@@ -3033,6 +3033,10 @@ renderPipeline();renderActivity();renderInterviews();initDobPickers();
     if(sub)sub.textContent=lastAtError?.message||'Check Netlify AIRTABLE_PAT environment variable';
   }
 })();
+
+/* ===== Deep link: https://portal.flyace.org/#coverage opens the Saturday coverage sign-up directly (used in the coverage SMS texts, 2026-08-30) ===== */
+if (location.hash === '#coverage') showView('coverage-lookup');
+window.addEventListener('hashchange', () => { if (location.hash === '#coverage') showView('coverage-lookup'); });
 </script>
 </body>
 </html>
