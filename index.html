@@ -1761,7 +1761,7 @@ async function loadCoverageSchedule(){
   container.innerHTML = '<p class="text-sm text-gray-500 text-center py-8">Loading schedule...</p>';
 
   const dates = getUpcomingSaturdays(6);
-  const dateFormula = 'OR(' + dates.map(d => '{Saturday Date}="' + d + '"').join(',') + ')';
+  const dateFormula = 'OR(' + dates.map(d => 'DATESTR({Saturday Date})="' + d + '"').join(',') + ')';
   const res = await atFetch('/' + AT_BASE_ID + '/' + AT_TABLE_COVERAGE + '?filterByFormula=' + encodeURIComponent(dateFormula) + '&pageSize=100');
 
   if(!res){
@@ -1822,7 +1822,7 @@ async function loadCoverageByClass(){
   container.innerHTML = '<p class="text-sm text-gray-500 text-center py-8">Loading schedule...</p>';
 
   const dates = getUpcomingSaturdays(6);
-  const dateFormula = 'OR(' + dates.map(d => '{Saturday Date}="' + d + '"').join(',') + ')';
+  const dateFormula = 'OR(' + dates.map(d => 'DATESTR({Saturday Date})="' + d + '"').join(',') + ')';
   const res = await atFetch('/' + AT_BASE_ID + '/' + AT_TABLE_COVERAGE + '?filterByFormula=' + encodeURIComponent(dateFormula) + '&pageSize=100');
 
   if(!res){
@@ -1948,7 +1948,7 @@ async function loadCoverageByPerson(){
   container.innerHTML = '<p class="text-sm text-gray-500 text-center py-8">Loading schedule...</p>';
 
   const dates = getUpcomingSaturdays(6);
-  const dateFormula = 'OR(' + dates.map(d => '{Saturday Date}="' + d + '"').join(',') + ')';
+  const dateFormula = 'OR(' + dates.map(d => 'DATESTR({Saturday Date})="' + d + '"').join(',') + ')';
   const res = await atFetch('/' + AT_BASE_ID + '/' + AT_TABLE_COVERAGE + '?filterByFormula=' + encodeURIComponent(dateFormula) + '&pageSize=100');
 
   if(!res){
@@ -2032,7 +2032,7 @@ async function loadAdminCoverageSchedule(){
   adminActivePeople.sort((a, b) => a.name.localeCompare(b.name));
 
   const dates = getUpcomingSaturdays(6);
-  const dateFormula = 'OR(' + dates.map(d => '{Saturday Date}="' + d + '"').join(',') + ')';
+  const dateFormula = 'OR(' + dates.map(d => 'DATESTR({Saturday Date})="' + d + '"').join(',') + ')';
   const res = await atFetch('/' + AT_BASE_ID + '/' + AT_TABLE_COVERAGE + '?filterByFormula=' + encodeURIComponent(dateFormula) + '&pageSize=100');
   if(!res){
     container.innerHTML = '<p class="text-sm text-red-400 text-center py-8">' + escapeHtml(atErrorMsg('Could not load the schedule.')) + '</p>';
