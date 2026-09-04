@@ -73,6 +73,7 @@ tailwind.config = {
   .neu-input::placeholder { color: #4a6080; }
   .neon-text { color: #00b4ff; text-shadow: 0 0 10px rgba(0,180,255,0.4), 0 0 30px rgba(0,180,255,0.15); }
   .neon-text-subtle { color: #00b4ff; text-shadow: 0 0 8px rgba(0,180,255,0.2); }
+  .neon-text-green { color: #39ff14; text-shadow: 0 0 10px rgba(57,255,20,0.4), 0 0 30px rgba(57,255,20,0.15); }
   .neon-line { height: 2px; background: linear-gradient(90deg, transparent, #00b4ff, transparent); box-shadow: 0 0 8px rgba(0,180,255,0.3); }
   .pipeline-dot { width: 14px; height: 14px; border-radius: 50%; box-shadow: 0 0 10px rgba(0,180,255,0.4); }
   .pipeline-line { height: 3px; background: rgba(0,180,255,0.15); flex: 1; }
@@ -204,7 +205,7 @@ tailwind.config = {
   <!-- Join Our Team -->
   <div class="mb-4">
     <h2 class="font-display text-2xl font-bold text-white text-center mb-8" style="letter-spacing:0.04em;">Join Our Team</h2>
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl mx-auto">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
       <!-- Apply: Staff -->
       <button onclick="showView('staff-apply')" class="neu-raised rounded-2xl p-10 text-center group cursor-pointer" style="transition: transform 0.2s cubic-bezier(0.22,1,0.36,1), box-shadow 0.2s ease;" onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='0 8px 32px rgba(0,180,255,0.12)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
         <div class="w-20 h-20 mx-auto mb-6 rounded-2xl flex items-center justify-center" style="background:rgba(0,180,255,0.08);border:1px solid rgba(0,180,255,0.15);box-shadow:0 0 20px rgba(0,180,255,0.08)">
@@ -221,20 +222,15 @@ tailwind.config = {
         <h3 class="font-display text-xl font-bold text-white mb-3">Volunteer With Us</h3>
         <p class="text-base text-white leading-relaxed">Give back to the ACE community. Tell us about yourself and how you'd like to help.</p>
       </button>
-    </div>
-    <div class="text-center mt-6">
-      <button onclick="showView('coverage-lookup')" class="neu-btn px-6 py-3 rounded-xl text-sm font-display tracking-wide neon-text-subtle inline-flex items-center gap-2">
-        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-        Already on the team? View / Sign Up for Saturday Schedule
+      <!-- Staff/Volunteers login (neon-green accent so it reads as distinct from the two application cards) -->
+      <button onclick="showAdminLogin()" class="neu-raised rounded-2xl p-10 text-center group cursor-pointer" style="transition: transform 0.2s cubic-bezier(0.22,1,0.36,1), box-shadow 0.2s ease;" onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='0 8px 32px rgba(57,255,20,0.15)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+        <div class="w-20 h-20 mx-auto mb-6 rounded-2xl flex items-center justify-center" style="background:rgba(57,255,20,0.08);border:1px solid rgba(57,255,20,0.2);box-shadow:0 0 20px rgba(57,255,20,0.1)">
+          <svg width="36" height="36" fill="none" stroke="#39ff14" stroke-width="1.5" viewBox="0 0 24 24"><path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+        </div>
+        <h3 class="font-display text-xl font-bold neon-text-green mb-3">LOGIN Staff/Admin</h3>
+        <p class="text-base text-white leading-relaxed">Access the admissions pipeline, student data, and management tools. Password required.</p>
       </button>
-    </div>
-  </div>
-  <div class="neon-line my-8 max-w-xs mx-auto"></div>
-  <!-- ACE Adult Training and Staff/Volunteers -->
-  <div class="mb-4">
-    <h2 class="font-display text-2xl font-bold text-white text-center mb-8" style="letter-spacing:0.04em;">ACE Staff & Volunteer Sign In</h2>
-    <div class="grid grid-cols-1 gap-8 max-w-sm mx-auto">
-      <!-- Adult Flight Training (hidden per Pam, 2026-09-04 — restore by removing the hidden attribute and widening the grid back to md:grid-cols-2 max-w-3xl) -->
+      <!-- Adult Flight Training (hidden per Pam, 2026-09-04 — restore by removing the hidden attribute) -->
       <button hidden onclick="showView('register')" class="neu-raised rounded-2xl p-10 text-center group cursor-pointer" style="transition: transform 0.2s cubic-bezier(0.22,1,0.36,1), box-shadow 0.2s ease;" onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='0 8px 32px rgba(0,180,255,0.12)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
         <div class="w-20 h-20 mx-auto mb-6 rounded-2xl flex items-center justify-center" style="background:rgba(0,180,255,0.08);border:1px solid rgba(0,180,255,0.15);box-shadow:0 0 20px rgba(0,180,255,0.08)">
           <svg width="36" height="36" fill="none" stroke="#00b4ff" stroke-width="1.5" viewBox="0 0 24 24"><path d="M22 16.21v-1.45L14 9.5V4a2 2 0 00-4 0v5.5L2 14.76v1.45l8-2.5V19l-2 1.5V22l4-1 4 1v-2l-2-1.5v-5.79l8 2.5z"/></svg>
@@ -242,13 +238,11 @@ tailwind.config = {
         <h3 class="font-display text-xl font-bold text-white mb-3">Adult Flight Training</h3>
         <p class="text-base text-white leading-relaxed">Flight training programs for adult learners. Begin your aviation journey with ACE.</p>
       </button>
-      <!-- Staff/Volunteers login -->
-      <button onclick="showAdminLogin()" class="neu-raised rounded-2xl p-10 text-center group cursor-pointer" style="transition: transform 0.2s cubic-bezier(0.22,1,0.36,1), box-shadow 0.2s ease;" onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='0 8px 32px rgba(0,180,255,0.12)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
-        <div class="w-20 h-20 mx-auto mb-6 rounded-2xl flex items-center justify-center" style="background:rgba(0,180,255,0.08);border:1px solid rgba(0,180,255,0.15);box-shadow:0 0 20px rgba(0,180,255,0.08)">
-          <svg width="36" height="36" fill="none" stroke="#00b4ff" stroke-width="1.5" viewBox="0 0 24 24"><path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
-        </div>
-        <h3 class="font-display text-xl font-bold text-white mb-3">LOGIN Staff/Admin</h3>
-        <p class="text-base text-white leading-relaxed">Access the admissions pipeline, student data, and management tools. Password required.</p>
+    </div>
+    <div class="text-center mt-6">
+      <button onclick="showView('coverage-lookup')" class="neu-btn px-6 py-3 rounded-xl text-sm font-display tracking-wide neon-text-subtle inline-flex items-center gap-2">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+        Already on the team? View / Sign Up for Saturday Schedule
       </button>
     </div>
   </div>
