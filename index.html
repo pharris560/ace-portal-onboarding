@@ -1549,6 +1549,32 @@ function atErrorMsg(fallback){
 const AT_TABLE_STAFF = 'tblylF50qyHNtKHLH';
 const AT_TABLE_VOLUNTEERS = 'tbltf83MZS1TEE6Kt';
 
+/* One human must not hold BOTH a Staff and a Volunteer record (2026-09-05).
+   The SMS reply handler matches an inbound text by PHONE and checks Staff first, so a person in
+   both tables always resolves to Staff -- their signups under the other role become unreachable by
+   text, while the Friday/Saturday reminders (which group by phone) still list those slots. Blocking
+   the duplicate at application time is what keeps that from happening.
+
+   Deliberately matches on the SAME rule the reply handler uses -- last 10 phone digits, plus
+   case-insensitive email. A looser rule here would let through pairs that SMS then conflates. */
+function normPhoneDigits(p){ return (p || '').toString().replace(/\D/g, '').slice(-10); }
+
+async function findCrossRoleRecord(otherTable, email, phone){
+  const res = await atFetch('/' + AT_BASE_ID + '/' + otherTable + '?pageSize=100');
+  if(!res || !Array.isArray(res.records)) return { error: true };
+  const wantEmail = (email || '').trim().toLowerCase();
+  const wantPhone = normPhoneDigits(phone);
+  const hit = res.records.find(r => {
+    const f = r.fields || {};
+    const sameEmail = wantEmail && (f['Email'] || '').trim().toLowerCase() === wantEmail;
+    const samePhone = wantPhone && normPhoneDigits(f['Phone']) === wantPhone;
+    return sameEmail || samePhone;
+  });
+  return { error: false, record: hit || null, matchedOn: hit
+    ? (wantEmail && (hit.fields['Email'] || '').trim().toLowerCase() === wantEmail ? 'email' : 'phone')
+    : null };
+}
+
 async function submitStaffApplication(){
   const name = document.getElementById('staff-name').value.trim();
   const email = document.getElementById('staff-email').value.trim();
@@ -1572,6 +1598,22 @@ async function submitStaffApplication(){
 
   const btn = document.getElementById('staff-apply-btn');
   btn.disabled = true; btn.textContent = 'Submitting...';
+
+  const clash = await findCrossRoleRecord(AT_TABLE_VOLUNTEERS, email, phone);
+  if(clash.error){
+    btn.disabled = false; btn.textContent = 'Submit Application';
+    errEl.textContent = atErrorMsg('Could not check your details against our records. Please try again.');
+    errEl.classList.remove('hidden');
+    return;
+  }
+  if(clash.record){
+    btn.disabled = false; btn.textContent = 'Submit Application';
+    errEl.textContent = 'You already have a volunteer record with us under that '
+      + (clash.matchedOn === 'email' ? 'email address' : 'phone number')
+      + '. A person can be staff or a volunteer, not both \u2014 please contact ACE Staff at acestaff@flyace.org to switch your role.';
+    errEl.classList.remove('hidden');
+    return;
+  }
 
   const result = await atFetch('/' + AT_BASE_ID + '/' + AT_TABLE_STAFF, {
     method: 'POST',
@@ -1623,6 +1665,22 @@ async function submitVolunteerApplication(){
 
   const btn = document.getElementById('volunteer-apply-btn');
   btn.disabled = true; btn.textContent = 'Submitting...';
+
+  const clash = await findCrossRoleRecord(AT_TABLE_STAFF, email, phone);
+  if(clash.error){
+    btn.disabled = false; btn.textContent = 'Submit Application';
+    errEl.textContent = atErrorMsg('Could not check your details against our records. Please try again.');
+    errEl.classList.remove('hidden');
+    return;
+  }
+  if(clash.record){
+    btn.disabled = false; btn.textContent = 'Submit Application';
+    errEl.textContent = 'You already have a staff record with us under that '
+      + (clash.matchedOn === 'email' ? 'email address' : 'phone number')
+      + '. A person can be staff or a volunteer, not both \u2014 please contact ACE Staff at acestaff@flyace.org to switch your role.';
+    errEl.classList.remove('hidden');
+    return;
+  }
 
   const result = await atFetch('/' + AT_BASE_ID + '/' + AT_TABLE_VOLUNTEERS, {
     method: 'POST',
