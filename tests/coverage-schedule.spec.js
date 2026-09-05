@@ -55,6 +55,7 @@ test('coverage lookup: unknown email shows an error, no schedule access', async 
   await page.goto('/index.html');
 
   await page.locator('button', { hasText: 'View / Sign Up for Saturday Schedule' }).click();
+  await page.locator('#view-coverage-role button', { hasText: "I'm on Staff" }).click();
   await page.fill('#coverage-lookup-email', 'nobody@example.com');
   await page.click('#coverage-lookup-btn');
 
@@ -72,6 +73,7 @@ test('coverage schedule: sign up for a slot then cancel it', async ({ page }) =>
   await page.goto('/index.html');
 
   await page.locator('button', { hasText: 'View / Sign Up for Saturday Schedule' }).click();
+  await page.locator('#view-coverage-role button', { hasText: "I'm on Staff" }).click();
   await page.fill('#coverage-lookup-email', 'taylor@example.com');
   await page.click('#coverage-lookup-btn');
 
@@ -93,13 +95,14 @@ test('coverage schedule: sign up for a slot then cancel it', async ({ page }) =>
   expect(errors, 'no uncaught page errors').toEqual([]);
 });
 
-test('coverage schedule: volunteer lookup works the same as staff (checks both tables)', async ({ page }) => {
+test('coverage schedule: choosing Volunteer looks the person up in the Volunteers table', async ({ page }) => {
   await stubNetwork(page, {
     volunteerRecord: { id: 'recVOL1', fields: { 'Full Name': 'Sam Lee', Email: 'sam@example.com', Status: 'Active' } },
   });
   await page.goto('/index.html');
 
   await page.locator('button', { hasText: 'View / Sign Up for Saturday Schedule' }).click();
+  await page.locator('#view-coverage-role button', { hasText: "I'm a Volunteer" }).click();
   await page.fill('#coverage-lookup-email', 'sam@example.com');
   await page.click('#coverage-lookup-btn');
 
@@ -123,6 +126,7 @@ test('capacity: a class slot with 3 instructors already shows Full and blocks a 
   });
   await page.goto('/index.html');
   await page.locator('button', { hasText: 'View / Sign Up for Saturday Schedule' }).click();
+  await page.locator('#view-coverage-role button', { hasText: "I'm on Staff" }).click();
   await page.fill('#coverage-lookup-email', 'taylor@example.com');
   await page.click('#coverage-lookup-btn');
   await expect(page.locator('#view-coverage')).toBeVisible();
@@ -150,6 +154,7 @@ test('capacity: a class slot with 2 instructors + 1 volunteer still allows a 3rd
   });
   await page.goto('/index.html');
   await page.locator('button', { hasText: 'View / Sign Up for Saturday Schedule' }).click();
+  await page.locator('#view-coverage-role button', { hasText: "I'm on Staff" }).click();
   await page.fill('#coverage-lookup-email', 'jordan@example.com');
   await page.click('#coverage-lookup-btn');
   await expect(page.locator('#view-coverage')).toBeVisible();
@@ -177,6 +182,7 @@ test('by-person view: groups signups by name, shows dates+slots, allows cancelin
   });
   await page.goto('/index.html');
   await page.locator('button', { hasText: 'View / Sign Up for Saturday Schedule' }).click();
+  await page.locator('#view-coverage-role button', { hasText: "I'm on Staff" }).click();
   await page.fill('#coverage-lookup-email', 'alex@example.com');
   await page.click('#coverage-lookup-btn');
   await expect(page.locator('#view-coverage')).toBeVisible();
@@ -203,6 +209,7 @@ test('by-class view: one card per slot, each listing the next 6 Saturdays, sign 
   });
   await page.goto('/index.html');
   await page.locator('button', { hasText: 'View / Sign Up for Saturday Schedule' }).click();
+  await page.locator('#view-coverage-role button', { hasText: "I'm on Staff" }).click();
   await page.fill('#coverage-lookup-email', 'robin@example.com');
   await page.click('#coverage-lookup-btn');
   await expect(page.locator('#view-coverage')).toBeVisible();
@@ -225,4 +232,62 @@ test('by-class view: one card per slot, each listing the next 6 Saturdays, sign 
   // General slot (ACE Staff) should say it has no cap, not a Saturdays-needing-coverage count.
   const staffCard = page.locator('#coverage-by-class > div', { hasText: 'ACE Staff' }).first();
   await expect(staffCard).toContainText('no instructor cap');
+});
+
+/* ===== Role selection on #coverage (2026-09-05) =====
+   The lookup used to search Staff then fall through to Volunteers, so the role was inferred.
+   It is now chosen explicitly and exactly one table is searched. These cover that behaviour
+   and the escape hatch when someone picks the wrong side. */
+
+test('role selection: picking Staff when only a volunteer record exists errors, and the switch link recovers', async ({ page }) => {
+  const queried = [];
+  await stubNetwork(page, {
+    volunteerRecord: { id: 'recVOL9', fields: { 'Full Name': 'Casey Vol', Email: 'casey@example.com', Status: 'Active' } },
+  });
+  page.on('request', (r) => {
+    const u = r.url();
+    if (u.includes(AT_TABLE_STAFF)) queried.push('Staff');
+    if (u.includes(AT_TABLE_VOLUNTEERS)) queried.push('Volunteer');
+  });
+
+  await page.goto('/index.html');
+  await page.locator('button', { hasText: 'View / Sign Up for Saturday Schedule' }).click();
+  await page.locator('#view-coverage-role button', { hasText: "I'm on Staff" }).click();
+  await page.fill('#coverage-lookup-email', 'casey@example.com');
+  await page.click('#coverage-lookup-btn');
+
+  // Wrong side: error shown, no access, and the Volunteers table was never consulted.
+  await expect(page.locator('#coverage-lookup-error')).toBeVisible();
+  await expect(page.locator('#coverage-lookup-error')).toContainText('No active staff record');
+  await expect(page.locator('#view-coverage')).toBeHidden();
+  expect(queried).toEqual(['Staff']);
+
+  // The inline switch link re-runs the lookup against the other table.
+  await page.locator('#coverage-lookup-error button', { hasText: 'Try as a volunteer' }).click();
+  await page.fill('#coverage-lookup-email', 'casey@example.com');
+  await page.click('#coverage-lookup-btn');
+
+  await expect(page.locator('#view-coverage')).toBeVisible();
+  await expect(page.locator('#coverage-user-name')).toHaveText('Casey Vol');
+  expect(queried).toEqual(['Staff', 'Volunteer']);
+});
+
+test('role selection: #coverage lands on the chooser, #coverage-volunteer skips straight to the email box', async ({ page }) => {
+  await stubNetwork(page, {
+    volunteerRecord: { id: 'recVOL8', fields: { 'Full Name': 'Deep Link', Email: 'deep@example.com', Status: 'Active' } },
+  });
+
+  await page.goto('/index.html#coverage');
+  await expect(page.locator('#view-coverage-role')).toBeVisible();
+  await expect(page.locator('#view-coverage-lookup')).toBeHidden();
+
+  // The role-specific hash keeps the texted one-tap flow: no chooser, role already set.
+  await page.goto('/index.html#coverage-volunteer');
+  await expect(page.locator('#view-coverage-role')).toBeHidden();
+  await expect(page.locator('#view-coverage-lookup')).toBeVisible();
+  await expect(page.locator('#coverage-role-label')).toHaveText('a volunteer');
+
+  await page.fill('#coverage-lookup-email', 'deep@example.com');
+  await page.click('#coverage-lookup-btn');
+  await expect(page.locator('#coverage-user-name')).toHaveText('Deep Link');
 });

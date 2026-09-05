@@ -240,7 +240,7 @@ tailwind.config = {
       </button>
     </div>
     <div class="text-center mt-6">
-      <button onclick="showView('coverage-lookup')" class="neu-btn px-6 py-3 rounded-xl text-sm font-display tracking-wide neon-text-subtle inline-flex items-center gap-2">
+      <button onclick="showCoverageRoleChooser()" class="neu-btn px-6 py-3 rounded-xl text-sm font-display tracking-wide neon-text-subtle inline-flex items-center gap-2">
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
         Already on the team? View / Sign Up for Saturday Schedule
       </button>
@@ -820,6 +820,35 @@ tailwind.config = {
 </main>
 
 <!-- VIEW: COVERAGE LOOKUP (email-only, no password — mirrors the Zoom self-booking low-friction pattern) -->
+<!-- VIEW: COVERAGE ROLE CHOOSER (staff vs volunteer — picked explicitly, so the email lookup
+     searches exactly one table instead of guessing Staff-then-Volunteers, 2026-09-05) -->
+<main id="view-coverage-role" class="max-w-3xl mx-auto px-6 py-16 hidden fade-in">
+  <div class="text-center mb-8">
+    <div class="w-14 h-14 mx-auto mb-4 rounded-2xl flex items-center justify-center" style="background:rgba(0,180,255,0.08);border:1px solid rgba(0,180,255,0.15);">
+      <svg width="24" height="24" fill="none" stroke="#00b4ff" stroke-width="1.5" viewBox="0 0 24 24"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+    </div>
+    <h2 class="font-display text-xl font-bold text-white mb-1">Saturday Coverage Sign-Up</h2>
+    <p class="text-sm text-gray-500">First &mdash; are you signing up as staff or as a volunteer?</p>
+  </div>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <button onclick="chooseCoverageRole('Staff')" class="neu-raised rounded-2xl p-8 text-center cursor-pointer" style="transition: transform 0.2s cubic-bezier(0.22,1,0.36,1), box-shadow 0.2s ease;" onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='0 8px 32px rgba(0,180,255,0.12)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+      <div class="w-16 h-16 mx-auto mb-5 rounded-2xl flex items-center justify-center" style="background:rgba(0,180,255,0.08);border:1px solid rgba(0,180,255,0.15);box-shadow:0 0 20px rgba(0,180,255,0.08)">
+        <svg width="30" height="30" fill="none" stroke="#00b4ff" stroke-width="1.5" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2m18-9a4 4 0 100-8 4 4 0 000 8zm-13 9v-2a4 4 0 014-4h4a4 4 0 014 4v2"/></svg>
+      </div>
+      <h3 class="font-display text-lg font-bold text-white mb-2">I'm on Staff</h3>
+      <p class="text-sm text-gray-400 leading-relaxed">Instructors, coordinators and administrators. Each class slot holds up to <span id="coverage-role-cap"></span> staff.</p>
+    </button>
+    <button onclick="chooseCoverageRole('Volunteer')" class="neu-raised rounded-2xl p-8 text-center cursor-pointer" style="transition: transform 0.2s cubic-bezier(0.22,1,0.36,1), box-shadow 0.2s ease;" onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='0 8px 32px rgba(0,180,255,0.12)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+      <div class="w-16 h-16 mx-auto mb-5 rounded-2xl flex items-center justify-center" style="background:rgba(0,180,255,0.08);border:1px solid rgba(0,180,255,0.15);box-shadow:0 0 20px rgba(0,180,255,0.08)">
+        <svg width="30" height="30" fill="none" stroke="#00b4ff" stroke-width="1.5" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+      </div>
+      <h3 class="font-display text-lg font-bold text-white mb-2">I'm a Volunteer</h3>
+      <p class="text-sm text-gray-400 leading-relaxed">Helping out on a Saturday. Sign up for as many open slots as you like.</p>
+    </button>
+  </div>
+  <p class="text-xs text-gray-500 text-center mt-8">Not on the team yet? <button onclick="showView('staff-apply')" class="neon-text-subtle hover:text-white" style="transition:color 0.2s">Apply as staff</button> &middot; <button onclick="showView('volunteer-apply')" class="neon-text-subtle hover:text-white" style="transition:color 0.2s">Volunteer with us</button></p>
+</main>
+
 <main id="view-coverage-lookup" class="max-w-md mx-auto px-6 py-16 hidden fade-in">
   <div class="neu-raised rounded-2xl p-8">
     <div class="text-center mb-6">
@@ -827,12 +856,13 @@ tailwind.config = {
         <svg width="24" height="24" fill="none" stroke="#00b4ff" stroke-width="1.5" viewBox="0 0 24 24"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
       </div>
       <h2 class="font-display text-xl font-bold text-white mb-1">Saturday Coverage Schedule</h2>
-      <p class="text-sm text-gray-500">Enter the email on file for your Staff/Volunteer record.</p>
+      <p class="text-sm text-gray-500">Signing in as <span id="coverage-role-label" class="neon-text-subtle font-semibold"></span>. Enter the email on file for your record.</p>
     </div>
     <div class="space-y-4">
       <div><label class="block text-xs font-medium text-gray-400 mb-1.5 tracking-wide uppercase">Email</label><input type="email" id="coverage-lookup-email" class="neu-input w-full px-4 py-3 rounded-xl text-sm" placeholder="jane@example.com" onkeydown="if(event.key==='Enter')lookupCoverageUser()"></div>
       <p id="coverage-lookup-error" class="text-xs text-red-400 hidden"></p>
       <button onclick="lookupCoverageUser()" id="coverage-lookup-btn" class="neu-btn-primary w-full py-3 rounded-xl text-sm font-display tracking-wide">Continue</button>
+      <button onclick="showCoverageRoleChooser()" class="w-full text-xs text-gray-500 hover:text-gray-300 pt-1" style="transition:color 0.2s">&larr; Not <span id="coverage-role-label-2"></span>? Change</button>
     </div>
   </div>
 </main>
@@ -1630,6 +1660,11 @@ const COVERAGE_SLOTS = ['Falcons AM','Falcons PM','Hawks AM','Hawks PM','Eagles 
 const CLASS_SLOTS = ['Falcons AM','Falcons PM','Hawks AM','Hawks PM','Eagles AM','Sparrows AM'];
 const MAX_INSTRUCTORS_PER_CLASS = 3;
 let coverageUser = null; /* {type:'Staff'|'Volunteer', recordId, name} */
+/* Role is now chosen explicitly on the #coverage entry screen rather than inferred from which
+   table the email turns up in. That matters once a person exists in BOTH tables (same email as
+   staff and as a volunteer): the old Staff-then-Volunteers fallthrough always silently won as
+   Staff, with no way to reach the volunteer record. 2026-09-05. */
+let coverageRole = null; /* 'Staff' | 'Volunteer' */
 let coverageViewMode = 'date'; /* 'date' | 'person' */
 let coverageRecordsCache = []; /* last-fetched Coverage Signups records, reused by the "By Person" view */
 
@@ -1651,6 +1686,28 @@ function escapeHtml(s){
   return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
+function showCoverageRoleChooser(){
+  coverageRole = null;
+  const capEl = document.getElementById('coverage-role-cap');
+  if(capEl) capEl.textContent = MAX_INSTRUCTORS_PER_CLASS;
+  const errEl = document.getElementById('coverage-lookup-error');
+  if(errEl) errEl.classList.add('hidden');
+  showView('coverage-role');
+}
+
+function chooseCoverageRole(role){
+  coverageRole = role;
+  const label = role === 'Staff' ? 'staff' : 'a volunteer';
+  document.getElementById('coverage-role-label').textContent = label;
+  document.getElementById('coverage-role-label-2').textContent = label;
+  const errEl = document.getElementById('coverage-lookup-error');
+  errEl.classList.add('hidden');
+  showView('coverage-lookup');
+  const input = document.getElementById('coverage-lookup-email');
+  input.value = '';
+  input.focus();
+}
+
 async function lookupCoverageUser(){
   const email = document.getElementById('coverage-lookup-email').value.trim().toLowerCase();
   const errEl = document.getElementById('coverage-lookup-error');
@@ -1664,20 +1721,20 @@ async function lookupCoverageUser(){
   const btn = document.getElementById('coverage-lookup-btn');
   btn.disabled = true; btn.textContent = 'Looking up...';
 
+  /* Search only the table for the role the person picked -- see coverageRole above. */
+  const type = coverageRole === 'Volunteer' ? 'Volunteer' : 'Staff';
+  const table = type === 'Volunteer' ? AT_TABLE_VOLUNTEERS : AT_TABLE_STAFF;
   const formula = encodeURIComponent('AND(LOWER({Email})="' + email + '",{Status}="Active")');
-  let res = await atFetch('/' + AT_BASE_ID + '/' + AT_TABLE_STAFF + '?filterByFormula=' + formula);
-  let type = 'Staff';
-  let rec = res && res.records && res.records[0];
-  if(!rec){
-    res = await atFetch('/' + AT_BASE_ID + '/' + AT_TABLE_VOLUNTEERS + '?filterByFormula=' + formula);
-    type = 'Volunteer';
-    rec = res && res.records && res.records[0];
-  }
+  const res = await atFetch('/' + AT_BASE_ID + '/' + table + '?filterByFormula=' + formula);
+  const rec = res && res.records && res.records[0];
 
   btn.disabled = false; btn.textContent = 'Continue';
 
   if(!rec){
-    errEl.textContent = 'No active staff or volunteer record found for that email. Contact ACE Staff if you believe this is an error.';
+    const otherRole = type === 'Staff' ? 'Volunteer' : 'Staff';
+    errEl.innerHTML = 'No active ' + (type === 'Staff' ? 'staff' : 'volunteer')
+      + ' record found for that email. <button onclick="chooseCoverageRole(\'' + otherRole + '\')" class="underline hover:text-red-300">Try as '
+      + (otherRole === 'Staff' ? 'staff' : 'a volunteer') + '</button>, or contact ACE Staff if you believe this is an error.';
     errEl.classList.remove('hidden');
     return;
   }
@@ -3043,9 +3100,19 @@ renderPipeline();renderActivity();renderInterviews();initDobPickers();
   }
 })();
 
-/* ===== Deep link: https://portal.flyace.org/#coverage opens the Saturday coverage sign-up directly (used in the coverage SMS texts, 2026-08-30) ===== */
-if (location.hash === '#coverage') showView('coverage-lookup');
-window.addEventListener('hashchange', () => { if (location.hash === '#coverage') showView('coverage-lookup'); });
+/* ===== Deep link: https://portal.flyace.org/#coverage opens the Saturday coverage sign-up directly
+   (used in the coverage SMS texts, 2026-08-30). Since 2026-09-05 it lands on the role chooser.
+   #coverage-staff / #coverage-volunteer skip the chooser and go straight to the email box, so a
+   text sent by a workflow that already knows the person's role can still be one tap. ===== */
+function routeCoverageHash(){
+  const h = location.hash;
+  if (h === '#coverage') { showCoverageRoleChooser(); return true; }
+  if (h === '#coverage-staff') { chooseCoverageRole('Staff'); return true; }
+  if (h === '#coverage-volunteer') { chooseCoverageRole('Volunteer'); return true; }
+  return false;
+}
+routeCoverageHash();
+window.addEventListener('hashchange', routeCoverageHash);
 </script>
 </body>
 </html>

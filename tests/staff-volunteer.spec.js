@@ -66,7 +66,7 @@ test('volunteer application: fill → submit → confirmation, writes Pending to
   await stubNetwork(page, capture);
   await page.goto('/index.html');
 
-  await page.locator('button', { hasText: 'Volunteer With Us' }).click();
+  await page.locator('#view-home button', { hasText: 'Volunteer With Us' }).click();
   await expect(page.locator('#volunteer-apply-form-card')).toBeVisible();
 
   await page.fill('#volunteer-name', 'Sam Lee');
