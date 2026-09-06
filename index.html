@@ -767,10 +767,13 @@ tailwind.config = {
       <div><label class="block text-xs font-medium text-gray-400 mb-1.5 tracking-wide uppercase">Phone</label><input type="tel" id="staff-phone" class="neu-input w-full px-4 py-3 rounded-xl text-sm" placeholder="(555) 555-5555"></div>
       <div><label class="block text-xs font-medium text-gray-400 mb-1.5 tracking-wide uppercase">Position Interested In</label>
         <select id="staff-role" class="neu-input w-full px-4 py-3 rounded-xl text-sm">
+          <!-- These MUST match the Airtable Staff.Role singleSelect choices exactly
+               (Instructor / Staff / Administrator). Airtable rejects any other value with
+               422 INVALID_MULTIPLE_CHOICE_OPTIONS, which surfaced here as a failed
+               application the applicant could never get past. 2026-09-05. -->
           <option value="Instructor">Instructor</option>
-          <option value="Coordinator">Coordinator</option>
+          <option value="Staff">Staff</option>
           <option value="Administrator">Administrator</option>
-          <option value="Other">Other</option>
         </select>
       </div>
       <div><label class="block text-xs font-medium text-gray-400 mb-1.5 tracking-wide uppercase">Tell us about yourself <span class="text-gray-600 normal-case">(optional)</span></label><textarea id="staff-notes" rows="4" class="neu-input w-full px-4 py-3 rounded-xl text-sm" placeholder="Relevant experience, availability, etc."></textarea></div>

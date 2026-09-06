@@ -204,3 +204,33 @@ test('cross-role guard: an unrelated person is still allowed through', async ({ 
   expect(capture.body.fields['Full Name']).toBe('Brand New');
   expect(capture.body.fields.Status).toBe('Pending');
 });
+
+/* The Role dropdown must offer exactly the Airtable Staff.Role singleSelect choices.
+   Airtable rejects anything else with 422 INVALID_MULTIPLE_CHOICE_OPTIONS, which reached
+   the applicant as a failed submission they could never get past (2026-09-05). */
+const AIRTABLE_STAFF_ROLE_CHOICES = ['Instructor', 'Staff', 'Administrator'];
+
+test('staff role dropdown offers exactly the Airtable Role choices', async ({ page }) => {
+  await stubNetwork(page, {});
+  await page.goto('/index.html');
+  await page.locator('#view-home button', { hasText: 'Apply for a Staff Position' }).click();
+  const values = await page.locator('#staff-role option').evaluateAll(os => os.map(o => o.value));
+  expect(values).toEqual(AIRTABLE_STAFF_ROLE_CHOICES);
+});
+
+test('staff application submits the selected role verbatim', async ({ page }) => {
+  const capture = {};
+  await stubNetwork(page, capture);
+  await page.goto('/index.html');
+  await page.locator('#view-home button', { hasText: 'Apply for a Staff Position' }).click();
+  await page.fill('#staff-name', 'Role Check');
+  await page.fill('#staff-email', 'role.check@example.com');
+  await page.fill('#staff-phone', '555-444-3333');
+  await page.selectOption('#staff-role', 'Staff');
+  await page.check('#staff-sms-optin');
+  await page.click('#staff-apply-btn');
+
+  await expect(page.locator('#staff-apply-success')).toBeVisible({ timeout: 10000 });
+  expect(capture.body.fields.Role).toBe('Staff');
+  expect(AIRTABLE_STAFF_ROLE_CHOICES).toContain(capture.body.fields.Role);
+});
