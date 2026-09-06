@@ -54,7 +54,7 @@ test('coverage lookup: unknown email shows an error, no schedule access', async 
   await stubNetwork(page);
   await page.goto('/index.html');
 
-  await page.locator('button', { hasText: 'View / Sign Up for Saturday Schedule' }).click();
+  await page.locator('#view-home button', { hasText: 'View My Schedule' }).click();
   await page.locator('#view-coverage-role button', { hasText: "I'm on Staff" }).click();
   await page.fill('#coverage-lookup-email', 'nobody@example.com');
   await page.click('#coverage-lookup-btn');
@@ -72,7 +72,7 @@ test('coverage schedule: sign up for a slot then cancel it', async ({ page }) =>
   });
   await page.goto('/index.html');
 
-  await page.locator('button', { hasText: 'View / Sign Up for Saturday Schedule' }).click();
+  await page.locator('#view-home button', { hasText: 'View My Schedule' }).click();
   await page.locator('#view-coverage-role button', { hasText: "I'm on Staff" }).click();
   await page.fill('#coverage-lookup-email', 'taylor@example.com');
   await page.click('#coverage-lookup-btn');
@@ -101,7 +101,7 @@ test('coverage schedule: choosing Volunteer looks the person up in the Volunteer
   });
   await page.goto('/index.html');
 
-  await page.locator('button', { hasText: 'View / Sign Up for Saturday Schedule' }).click();
+  await page.locator('#view-home button', { hasText: 'View My Schedule' }).click();
   await page.locator('#view-coverage-role button', { hasText: "I'm a Volunteer" }).click();
   await page.fill('#coverage-lookup-email', 'sam@example.com');
   await page.click('#coverage-lookup-btn');
@@ -125,7 +125,7 @@ test('capacity: a class slot with 3 instructors already shows Full and blocks a 
     signups: preSignups,
   });
   await page.goto('/index.html');
-  await page.locator('button', { hasText: 'View / Sign Up for Saturday Schedule' }).click();
+  await page.locator('#view-home button', { hasText: 'View My Schedule' }).click();
   await page.locator('#view-coverage-role button', { hasText: "I'm on Staff" }).click();
   await page.fill('#coverage-lookup-email', 'taylor@example.com');
   await page.click('#coverage-lookup-btn');
@@ -153,7 +153,7 @@ test('capacity: a class slot with 2 instructors + 1 volunteer still allows a 3rd
     signups: preSignups,
   });
   await page.goto('/index.html');
-  await page.locator('button', { hasText: 'View / Sign Up for Saturday Schedule' }).click();
+  await page.locator('#view-home button', { hasText: 'View My Schedule' }).click();
   await page.locator('#view-coverage-role button', { hasText: "I'm on Staff" }).click();
   await page.fill('#coverage-lookup-email', 'jordan@example.com');
   await page.click('#coverage-lookup-btn');
@@ -181,7 +181,7 @@ test('by-person view: groups signups by name, shows dates+slots, allows cancelin
     signups: preSignups,
   });
   await page.goto('/index.html');
-  await page.locator('button', { hasText: 'View / Sign Up for Saturday Schedule' }).click();
+  await page.locator('#view-home button', { hasText: 'View My Schedule' }).click();
   await page.locator('#view-coverage-role button', { hasText: "I'm on Staff" }).click();
   await page.fill('#coverage-lookup-email', 'alex@example.com');
   await page.click('#coverage-lookup-btn');
@@ -208,7 +208,7 @@ test('by-class view: one card per slot, each listing the next 6 Saturdays, sign 
     signups: preSignups,
   });
   await page.goto('/index.html');
-  await page.locator('button', { hasText: 'View / Sign Up for Saturday Schedule' }).click();
+  await page.locator('#view-home button', { hasText: 'View My Schedule' }).click();
   await page.locator('#view-coverage-role button', { hasText: "I'm on Staff" }).click();
   await page.fill('#coverage-lookup-email', 'robin@example.com');
   await page.click('#coverage-lookup-btn');
@@ -254,7 +254,7 @@ test('role selection: picking Staff when only a volunteer record exists errors, 
   });
 
   await page.goto('/index.html');
-  await page.locator('button', { hasText: 'View / Sign Up for Saturday Schedule' }).click();
+  await page.locator('#view-home button', { hasText: 'View My Schedule' }).click();
   await page.locator('#view-coverage-role button', { hasText: "I'm on Staff" }).click();
   await page.fill('#coverage-lookup-email', 'casey@example.com');
   await page.click('#coverage-lookup-btn');
@@ -317,7 +317,7 @@ test('staff timeslots: three digit-free slots exist, with their hours shown in t
   expect(hours['ACE Staff PM']).toBe('12pm-3pm');
 
   // The hours render next to the slot name in the By Class view.
-  await page.locator('button', { hasText: 'View / Sign Up for Saturday Schedule' }).click();
+  await page.locator('#view-home button', { hasText: 'View My Schedule' }).click();
   await page.locator('#view-coverage-role button', { hasText: "I'm on Staff" }).click();
   await page.fill('#coverage-lookup-email', 'ts@example.com');
   await page.click('#coverage-lookup-btn');
@@ -336,4 +336,30 @@ test('staff timeslots: class slots stay capped, staff slots do not', async ({ pa
   // The cap is an instructor-coverage limit on classes only; the general staff slots are uncapped.
   for (const s of staffSlots) expect(classSlots).not.toContain(s);
   expect(classSlots).toHaveLength(6);
+});
+
+/* "View My Schedule" card (2026-09-06). Replaced the small text link that used to sit under the
+   Join Our Team row -- staff kept clicking the neon-green admin card instead of the link. */
+test('home page: View My Schedule is a card in Join Our Team, and the old text link is gone', async ({ page }) => {
+  await stubNetwork(page, {});
+  await page.goto('/index.html');
+
+  const card = page.locator('#view-home button', { hasText: 'View My Schedule' });
+  await expect(card).toHaveCount(1);
+  await expect(card).toBeVisible();
+  await expect(card).toContainText('No password needed');
+
+  // It sits inside the card grid, not as a link below it.
+  const grid = page.locator('#view-home .grid').filter({ hasText: 'View My Schedule' });
+  await expect(grid).toHaveCount(1);
+  await expect(grid.locator('> button:visible')).toHaveCount(4);
+
+  // The old link text must not survive anywhere on the page.
+  await expect(page.locator('text=Already on the team? View / Sign Up for Saturday Schedule')).toHaveCount(0);
+
+  // Neon green, matching the admin card's treatment.
+  await expect(card.locator('h3')).toHaveClass(/neon-text-green/);
+
+  await card.click();
+  await expect(page.locator('#view-coverage-role')).toBeVisible();
 });
