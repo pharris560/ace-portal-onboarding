@@ -2045,8 +2045,27 @@ async function signUpForSlot(date, slot){
     showToast(atErrorMsg('Could not sign up. Please try again.'), 'error');
     return;
   }
+  /* Instant confirmation text (2026-09-06). Signing up used to send nothing until the Friday
+     before, so someone booking a slot on a Sunday heard nothing for days and reasonably
+     wondered whether it registered -- while claiming a slot BY TEXT got an immediate reply.
+     Fire-and-forget on purpose: the sign-up already succeeded, so a slow or down n8n must
+     never block the UI or surface an error. n8n owns the dedup + Active/phone checks. */
+  notifySignupCreated(result.id);
+
   showCenterConfirmation('Signed up!');
   refreshCoverageView();
+}
+
+function notifySignupCreated(signupId){
+  if(!signupId) return;
+  try{
+    fetch('https://n8n.flyace.org/webhook/coverage-signup-confirm', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ signupId }),
+      keepalive: true
+    }).catch(() => {});
+  }catch(_){ /* never let the confirmation text break sign-up */ }
 }
 
 async function cancelSignup(recordId){

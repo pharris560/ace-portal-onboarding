@@ -46,6 +46,16 @@ async function stubNetwork(page, { staffRecord = null, volunteerRecord = null, s
     return route.fulfill(jsonBody({ records: [] }));
   });
 
+  // The portal fires a fire-and-forget call to n8n after creating a signup. Intercept it so tests
+  // never touch production, and record the payloads so a test can assert on them.
+  page.__signupNotifications = [];
+  await page.route('**/webhook/coverage-signup-confirm', async (route) => {
+    let body = null;
+    try { body = route.request().postDataJSON(); } catch (_) {}
+    page.__signupNotifications.push(body);
+    await route.fulfill({ status: 200, contentType: 'application/json', body: '{"send":false}' });
+  });
+
   await page.route(/cdn\.tailwindcss\.com|fonts\.googleapis\.com|fonts\.gstatic\.com/, (route) =>
     route.fulfill({ status: 200, contentType: 'text/plain', body: '' }));
 }
@@ -362,4 +372,50 @@ test('home page: View My Schedule is a card in Join Our Team, and the old text l
 
   await card.click();
   await expect(page.locator('#view-coverage-role')).toBeVisible();
+});
+
+/* Instant signup confirmation (2026-09-06). Signing up in the portal used to send nothing until
+   the Friday before; claiming by text got an immediate reply. The portal now pings n8n, which
+   owns the dedup and Active/phone checks. The call is fire-and-forget: it must never block the
+   UI or turn a successful sign-up into a visible error. */
+test('signup confirmation: the portal notifies n8n with the new record id', async ({ page }) => {
+  await stubNetwork(page, {
+    staffRecord: { id: 'recSTAFFN', fields: { 'Full Name': 'Notify Tester', Email: 'n@example.com', Status: 'Active' } },
+  });
+  await page.goto('/index.html');
+  await page.locator('#view-home button', { hasText: 'View My Schedule' }).click();
+  await page.locator('#view-coverage-role button', { hasText: "I'm on Staff" }).click();
+  await page.fill('#coverage-lookup-email', 'n@example.com');
+  await page.click('#coverage-lookup-btn');
+
+  const firstCard = page.locator('#coverage-schedule > div').first();
+  await firstCard.locator('button', { hasText: 'Sign Up' }).first().click();
+  await expect(firstCard.getByText('Notify Tester (You)')).toBeVisible({ timeout: 10000 });
+
+  await expect.poll(() => page.__signupNotifications.length).toBeGreaterThan(0);
+  // It must send the id Airtable returned for the row it just created -- nothing else.
+  expect(page.__signupNotifications[0]).toEqual({ signupId: 'recSIGNUP1' });
+});
+
+test('signup confirmation: a failing notify call does not break the sign-up', async ({ page }) => {
+  await stubNetwork(page, {
+    staffRecord: { id: 'recSTAFFF', fields: { 'Full Name': 'Resilient Tester', Email: 'r@example.com', Status: 'Active' } },
+  });
+  // Override the notify route with a hard failure.
+  await page.route('**/webhook/coverage-signup-confirm', (route) => route.abort('failed'));
+  const errors = [];
+  page.on('pageerror', (e) => { if (!/tailwind is not defined/.test(String(e))) errors.push(String(e)); });
+
+  await page.goto('/index.html');
+  await page.locator('#view-home button', { hasText: 'View My Schedule' }).click();
+  await page.locator('#view-coverage-role button', { hasText: "I'm on Staff" }).click();
+  await page.fill('#coverage-lookup-email', 'r@example.com');
+  await page.click('#coverage-lookup-btn');
+
+  const firstCard = page.locator('#coverage-schedule > div').first();
+  await firstCard.locator('button', { hasText: 'Sign Up' }).first().click();
+
+  // The signup still lands and the confirmation still shows.
+  await expect(firstCard.getByText('Resilient Tester (You)')).toBeVisible({ timeout: 10000 });
+  expect(errors, 'a failed notify must not surface as a page error').toEqual([]);
 });
