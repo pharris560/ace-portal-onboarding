@@ -238,8 +238,13 @@ test('by-class view: one card per slot, each listing the next 6 Saturdays, sign 
   await expect(eaglesCard).toContainText('Instructor One');
   await expect(eaglesCard).toContainText('Needs an instructor on');
 
-  // Sign up from the By Class view on a still-open Saturday row.
-  await eaglesCard.locator('button', { hasText: 'Sign Up' }).first().click();
+  // By Class signs up in bulk: tick a Saturday, then submit the card once.
+  const bulkBtn = eaglesCard.locator('button[id^="bulk-"]');
+  await expect(bulkBtn).toBeDisabled();
+  await eaglesCard.locator('input.coverage-bulk-check').first().check();
+  await expect(bulkBtn).toBeEnabled();
+  await expect(bulkBtn).toHaveText('Sign up for 1 date');
+  await bulkBtn.click();
   await expect(eaglesCard.getByText('Robin Casey (You)')).toBeVisible({ timeout: 10000 });
 
   // General slot (ACE Staff) should say it has no cap, not a Saturdays-needing-coverage count.
@@ -394,7 +399,8 @@ test('signup confirmation: the portal notifies n8n with the new record id', asyn
 
   await expect.poll(() => page.__signupNotifications.length).toBeGreaterThan(0);
   // It must send the id Airtable returned for the row it just created -- nothing else.
-  expect(page.__signupNotifications[0]).toEqual({ signupId: 'recSIGNUP1' });
+  // Always a list, so one text can cover a bulk sign-up rather than one per date.
+  expect(page.__signupNotifications[0]).toEqual({ signupIds: ['recSIGNUP1'] });
 });
 
 test('signup confirmation: a failing notify call does not break the sign-up', async ({ page }) => {
@@ -418,4 +424,59 @@ test('signup confirmation: a failing notify call does not break the sign-up', as
   // The signup still lands and the confirmation still shows.
   await expect(firstCard.getByText('Resilient Tester (You)')).toBeVisible({ timeout: 10000 });
   expect(errors, 'a failed notify must not surface as a page error').toEqual([]);
+});
+
+/* Bulk sign-up from By Class (2026-09-06): pick a slot, tick several Saturdays, submit once. */
+test('bulk sign-up: several Saturdays in one submit, and ONE confirmation call', async ({ page }) => {
+  await stubNetwork(page, {
+    staffRecord: { id: 'recBULK', fields: { 'Full Name': 'Bulk Tester', Email: 'bulk@example.com', Status: 'Active' } },
+  });
+  await page.goto('/index.html');
+  await page.locator('#view-home button', { hasText: 'View My Schedule' }).click();
+  await page.locator('#view-coverage-role button', { hasText: "I'm on Staff" }).click();
+  await page.fill('#coverage-lookup-email', 'bulk@example.com');
+  await page.click('#coverage-lookup-btn');
+  await page.click('#coverage-tab-class');
+
+  const card = page.locator('#coverage-by-class > div', { hasText: 'Hawks AM' }).first();
+  const btn = card.locator('button[id^="bulk-"]');
+
+  // Tick three of the six Saturdays.
+  const boxes = card.locator('input.coverage-bulk-check');
+  await boxes.nth(0).check();
+  await boxes.nth(2).check();
+  await boxes.nth(4).check();
+  await expect(btn).toHaveText('Sign up for 3 dates');
+
+  await btn.click();
+  await expect(card.getByText('Bulk Tester (You)').first()).toBeVisible({ timeout: 10000 });
+
+  // Exactly one notify call, carrying all three new ids -- not three separate calls.
+  await expect.poll(() => page.__signupNotifications.length).toBe(1);
+  const payload = page.__signupNotifications[0];
+  expect(Array.isArray(payload.signupIds)).toBe(true);
+  expect(payload.signupIds).toHaveLength(3);
+});
+
+test('bulk sign-up: unticking everything disables the submit button again', async ({ page }) => {
+  await stubNetwork(page, {
+    staffRecord: { id: 'recBULK2', fields: { 'Full Name': 'Toggle Tester', Email: 'tog@example.com', Status: 'Active' } },
+  });
+  await page.goto('/index.html');
+  await page.locator('#view-home button', { hasText: 'View My Schedule' }).click();
+  await page.locator('#view-coverage-role button', { hasText: "I'm on Staff" }).click();
+  await page.fill('#coverage-lookup-email', 'tog@example.com');
+  await page.click('#coverage-lookup-btn');
+  await page.click('#coverage-tab-class');
+
+  const card = page.locator('#coverage-by-class > div', { hasText: 'Falcons PM' }).first();
+  const btn = card.locator('button[id^="bulk-"]');
+  const box = card.locator('input.coverage-bulk-check').first();
+
+  await expect(btn).toBeDisabled();
+  await box.check();
+  await expect(btn).toBeEnabled();
+  await box.uncheck();
+  await expect(btn).toBeDisabled();
+  await expect(btn).toHaveText('Select dates above to sign up');
 });

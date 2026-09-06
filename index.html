@@ -1822,7 +1822,7 @@ async function lookupCoverageUser(){
 /* Shared row renderer used by both the By Date view (one card per Saturday, rows = slots)
    and the By Class view (one card per slot, rows = Saturdays) -- same slot/date pairing,
    just grouped in the opposite order, so the row itself is identical either way. */
-function renderCoverageRow(date, slot, people){
+function renderCoverageRow(date, slot, people, opts){
   const isClassSlot = CLASS_SLOTS.indexOf(slot) !== -1;
   const instructorCount = people.filter(p => p.type === 'Staff').length;
   const volunteerCount = people.length - instructorCount;
@@ -1856,7 +1856,13 @@ function renderCoverageRow(date, slot, people){
   } else if(iAmBlockedByCap){
     actionBtn = '<span class="px-3 py-1.5 rounded-lg text-sm text-gray-600 border border-white/5 shrink-0" title="3 of 3 instructor slots are filled for this class">Full</span>';
   } else {
-    actionBtn = '<button onclick="signUpForSlot(\'' + date + '\',\'' + slot + '\')" class="neu-btn px-3 py-1.5 rounded-lg text-sm neon-text-subtle shrink-0">Sign Up</button>';
+    actionBtn = opts && opts.bulk
+      /* By Class lists one slot across every upcoming Saturday, so ticking several and submitting
+         once beats clicking Sign Up six times. By Date keeps its per-row button. 2026-09-06. */
+      ? '<label class="flex items-center gap-2 shrink-0 cursor-pointer text-sm neon-text-subtle">'
+          + '<input type="checkbox" class="coverage-bulk-check" data-slot="' + escapeHtml(slot) + '" data-date="' + date + '" onchange="updateBulkBar(\'' + slotKey(slot) + '\')">'
+          + '<span>Select</span></label>'
+      : '<button onclick="signUpForSlot(\'' + date + '\',\'' + slot + '\')" class="neu-btn px-3 py-1.5 rounded-lg text-sm neon-text-subtle shrink-0">Sign Up</button>';
   }
 
   const slotStatusDot = isClassSlot
@@ -1876,6 +1882,63 @@ function renderCoverageRow(date, slot, people){
     isClassSlot, instructorCount, slotStatusDot };
 }
 
+/* A slot name is only safe as a DOM id once stripped of spaces and punctuation. */
+function slotKey(slot){ return 'bulk-' + String(slot).replace(/[^A-Za-z0-9]/g, ''); }
+
+function updateBulkBar(key){
+  const bar = document.getElementById(key);
+  if(!bar) return;
+  const card = bar.closest('[data-slot-card]');
+  const n = card ? card.querySelectorAll('.coverage-bulk-check:checked').length : 0;
+  bar.disabled = n === 0;
+  bar.textContent = n === 0 ? 'Select dates above to sign up'
+    : ('Sign up for ' + n + ' date' + (n === 1 ? '' : 's'));
+}
+
+/* Signs the person up for every ticked Saturday of one slot, then sends ONE confirmation text
+   covering all of them rather than one per date. */
+async function bulkSignUp(slot, key){
+  if(!coverageUser) return;
+  const bar = document.getElementById(key);
+  const card = bar && bar.closest('[data-slot-card]');
+  if(!card) return;
+  const dates = Array.from(card.querySelectorAll('.coverage-bulk-check:checked')).map(c => c.dataset.date);
+  if(!dates.length) return;
+
+  bar.disabled = true;
+  const original = bar.textContent;
+  bar.textContent = 'Signing up...';
+
+  const created = [];
+  const failed = [];
+  for(const date of dates){
+    const fields = {
+      'Saturday Date': date,
+      'Slot': slot,
+      'Person Type': coverageUser.type,
+      'Signed Up By Name': coverageUser.name,
+      'Signed Up At': new Date().toISOString()
+    };
+    fields[coverageUser.type] = [coverageUser.recordId];
+    const result = await atFetch('/' + AT_BASE_ID + '/' + AT_TABLE_COVERAGE, {
+      method: 'POST', body: JSON.stringify({ fields })
+    });
+    if(result && result.id) created.push(result.id); else failed.push(date);
+  }
+
+  if(created.length) notifySignupCreated(created);
+
+  bar.textContent = original;
+  if(failed.length && created.length){
+    showToast('Signed up for ' + created.length + ', but ' + failed.length + ' could not be saved. Please retry those.', 'error');
+  } else if(failed.length){
+    showToast(atErrorMsg('Could not sign up. Please try again.'), 'error');
+  } else {
+    showCenterConfirmation(created.length === 1 ? 'Signed up!' : ('Signed up for ' + created.length + ' Saturdays!'));
+  }
+  refreshCoverageView();
+}
+
 function coverageRowLabelHtml(label){
   /* Staff slots carry their hours as a muted suffix so the slot value itself stays digit-free
      (see STAFF_SLOTS). Class slots are unchanged. */
@@ -1887,8 +1950,8 @@ function coverageRowLabelHtml(label){
 
 /* renderCoverageRow leaves the label paragraph empty (its caller knows whether that label
    is a slot name or a date name) -- this splices the right label back in. */
-function renderCoverageRowWithLabel(date, slot, people, label){
-  const row = renderCoverageRow(date, slot, people);
+function renderCoverageRowWithLabel(date, slot, people, label, opts){
+  const row = renderCoverageRow(date, slot, people, opts);
   return row.html.replace('<p class="text-base font-medium text-white"></p>', coverageRowLabelHtml(label));
 }
 
@@ -1992,7 +2055,7 @@ async function loadCoverageByClass(){
       const instructorCount = people.filter(p => p.type === 'Staff').length;
       if(isClassSlot && instructorCount < MAX_INSTRUCTORS_PER_CLASS) openCount++;
       const dateLabel = new Date(d + 'T00:00:00').toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' }) + (dateIdx === 0 ? ' (This Week)' : '');
-      return renderCoverageRowWithLabel(d, slot, people, dateLabel);
+      return renderCoverageRowWithLabel(d, slot, people, dateLabel, { bulk: true });
     }).join('');
 
     const capNote = isClassSlot
@@ -2003,10 +2066,14 @@ async function loadCoverageByClass(){
         + (STAFF_SLOT_HOURS[slot] ? escapeHtml(STAFF_SLOT_HOURS[slot]) + ' &middot; general slot' : 'General slot')
         + ' &mdash; no instructor cap</span>';
 
-    return '<div class="neu-raised rounded-2xl p-5 mb-4">'
+    const key = slotKey(slot);
+    return '<div class="neu-raised rounded-2xl p-5 mb-4" data-slot-card="' + escapeHtml(slot) + '">'
       + '<h4 class="font-display text-base font-bold neon-text-subtle mb-1">' + escapeHtml(slot) + '</h4>'
       + '<div class="mb-3">' + capNote + '</div>'
       + rows
+      + '<button id="' + key + '" disabled onclick="bulkSignUp(\'' + slot.replace(/'/g, "\\'") + '\',\'' + key + '\')" '
+        + 'class="neu-btn-primary w-full mt-4 py-2.5 rounded-xl text-sm font-display tracking-wide disabled:opacity-40 disabled:cursor-not-allowed">'
+        + 'Select dates above to sign up</button>'
       + '</div>';
   }).join('');
 }
@@ -2056,13 +2123,15 @@ async function signUpForSlot(date, slot){
   refreshCoverageView();
 }
 
-function notifySignupCreated(signupId){
-  if(!signupId) return;
+function notifySignupCreated(signupIdOrIds){
+  const ids = Array.isArray(signupIdOrIds) ? signupIdOrIds.filter(Boolean) : (signupIdOrIds ? [signupIdOrIds] : []);
+  if(!ids.length) return;
   try{
+    /* n8n sends ONE text covering every id, so a bulk sign-up doesn't fire a text per date. */
     fetch('https://n8n.flyace.org/webhook/coverage-signup-confirm', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ signupId }),
+      body: JSON.stringify({ signupIds: ids }),
       keepalive: true
     }).catch(() => {});
   }catch(_){ /* never let the confirmation text break sign-up */ }
