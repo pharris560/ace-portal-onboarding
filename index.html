@@ -1715,9 +1715,17 @@ async function submitVolunteerApplication(){
 
 /* ===== Saturday Coverage Schedule (self-service sign-up + viewable calendar) ===== */
 const AT_TABLE_COVERAGE = 'tbl3DGD8ruJjlblf9';
-const COVERAGE_SLOTS = ['Falcons AM','Falcons PM','Hawks AM','Hawks PM','Eagles AM','Sparrows AM','ACE Staff'];
+/* Staff who aren't instructing pick a time of day rather than a class (2026-09-05). AM/PM mirror
+   the class naming deliberately: names must stay digit-free, because the CLAIM reply parser strips
+   letters and reads the remaining digits as the date — a slot literally named "9am-12pm" makes
+   "CLAIM ACE Staff 9am-12pm 9/19" book Sept 12. Longest name first so "ACE Staff All Day" can never
+   be shadowed by a substring match on "ACE Staff AM". */
+const STAFF_SLOTS = ['ACE Staff All Day','ACE Staff AM','ACE Staff PM'];
+const COVERAGE_SLOTS = ['Falcons AM','Falcons PM','Hawks AM','Hawks PM','Eagles AM','Sparrows AM'].concat(STAFF_SLOTS);
+/* Hours shown next to a staff slot wherever a person picks one. Not part of the slot value itself. */
+const STAFF_SLOT_HOURS = { 'ACE Staff All Day': '9am-3pm', 'ACE Staff AM': '9am-12pm', 'ACE Staff PM': '12pm-3pm' };
 /* The 6 class-specific slots cap at MAX_INSTRUCTORS_PER_CLASS Staff signups each.
-   "ACE Staff" is a general slot, not tied to one class, so it's uncapped.
+   The ACE Staff slots are general, not tied to one class, so they're uncapped.
    Volunteers are never capped on any slot — the cap is an instructor-coverage limit, not a headcount limit. */
 const CLASS_SLOTS = ['Falcons AM','Falcons PM','Hawks AM','Hawks PM','Eagles AM','Sparrows AM'];
 const MAX_INSTRUCTORS_PER_CLASS = 3;
@@ -1865,7 +1873,12 @@ function renderCoverageRow(date, slot, people){
 }
 
 function coverageRowLabelHtml(label){
-  return '<p class="text-base font-medium text-white">' + escapeHtml(label) + '</p>';
+  /* Staff slots carry their hours as a muted suffix so the slot value itself stays digit-free
+     (see STAFF_SLOTS). Class slots are unchanged. */
+  const hours = STAFF_SLOT_HOURS[label];
+  return '<p class="text-base font-medium text-white">' + escapeHtml(label)
+    + (hours ? ' <span class="text-sm text-gray-500">(' + escapeHtml(hours) + ')</span>' : '')
+    + '</p>';
 }
 
 /* renderCoverageRow leaves the label paragraph empty (its caller knows whether that label
@@ -1982,7 +1995,9 @@ async function loadCoverageByClass(){
       ? (openCount > 0
           ? '<span class="text-sm text-gray-500">Needs an instructor on ' + openCount + ' of the next ' + dates.length + ' Saturdays</span>'
           : '<span class="text-sm" style="color:#2f6d4f">Fully staffed for the next ' + dates.length + ' Saturdays</span>')
-      : '<span class="text-sm text-gray-500">General slot &mdash; no instructor cap</span>';
+      : '<span class="text-sm text-gray-500">'
+        + (STAFF_SLOT_HOURS[slot] ? escapeHtml(STAFF_SLOT_HOURS[slot]) + ' &middot; general slot' : 'General slot')
+        + ' &mdash; no instructor cap</span>';
 
     return '<div class="neu-raised rounded-2xl p-5 mb-4">'
       + '<h4 class="font-display text-base font-bold neon-text-subtle mb-1">' + escapeHtml(slot) + '</h4>'

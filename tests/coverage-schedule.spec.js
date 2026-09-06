@@ -218,8 +218,11 @@ test('by-class view: one card per slot, each listing the next 6 Saturdays, sign 
   await expect(page.locator('#coverage-by-class-panel')).toBeVisible();
   await expect(page.locator('#coverage-by-date-panel')).toBeHidden();
 
-  // 7 slot cards, one per COVERAGE_SLOTS entry.
-  await expect(page.locator('#coverage-by-class > div')).toHaveCount(7);
+  // One slot card per COVERAGE_SLOTS entry -- read the live constant rather than hardcoding a
+  // count, so adding or removing a slot doesn't require editing this test.
+  const slotCount = await page.evaluate(() => COVERAGE_SLOTS.length);
+  expect(slotCount).toBeGreaterThanOrEqual(7);
+  await expect(page.locator('#coverage-by-class > div')).toHaveCount(slotCount);
 
   const eaglesCard = page.locator('#coverage-by-class > div', { hasText: 'Eagles AM' }).first();
   await expect(eaglesCard).toContainText('Instructor One');
@@ -290,4 +293,47 @@ test('role selection: #coverage lands on the chooser, #coverage-volunteer skips 
   await page.fill('#coverage-lookup-email', 'deep@example.com');
   await page.click('#coverage-lookup-btn');
   await expect(page.locator('#coverage-user-name')).toHaveText('Deep Link');
+});
+
+/* Staff timeslots (2026-09-05). Staff who aren't instructing pick a time of day instead of a
+   class. Names must stay digit-free -- the CLAIM parser strips letters and reads the leftover
+   digits as the date, so a slot named "9am-12pm" would book Sept 12 instead of the real date. */
+test('staff timeslots: three digit-free slots exist, with their hours shown in the UI', async ({ page }) => {
+  await stubNetwork(page, {
+    staffRecord: { id: 'recSTAFFT', fields: { 'Full Name': 'Timeslot Tester', Email: 'ts@example.com', Status: 'Active' } },
+  });
+  await page.goto('/index.html');
+
+  const { staffSlots, hours, allSlots } = await page.evaluate(() => ({
+    staffSlots: STAFF_SLOTS, hours: STAFF_SLOT_HOURS, allSlots: COVERAGE_SLOTS,
+  }));
+
+  expect(staffSlots).toEqual(['ACE Staff All Day', 'ACE Staff AM', 'ACE Staff PM']);
+  // No digits anywhere in a slot name, or the CLAIM date parser misreads them.
+  for (const s of allSlots) expect(s, `slot "${s}" must not contain digits`).not.toMatch(/\d/);
+  // Longest first, so "ACE Staff All Day" can't be shadowed by a substring match on "ACE Staff AM".
+  expect(staffSlots[0]).toBe('ACE Staff All Day');
+  expect(hours['ACE Staff AM']).toBe('9am-12pm');
+  expect(hours['ACE Staff PM']).toBe('12pm-3pm');
+
+  // The hours render next to the slot name in the By Class view.
+  await page.locator('button', { hasText: 'View / Sign Up for Saturday Schedule' }).click();
+  await page.locator('#view-coverage-role button', { hasText: "I'm on Staff" }).click();
+  await page.fill('#coverage-lookup-email', 'ts@example.com');
+  await page.click('#coverage-lookup-btn');
+  await page.locator('#coverage-tab-class').click();
+
+  const amCard = page.locator('#coverage-by-class > div', { hasText: 'ACE Staff AM' }).first();
+  await expect(amCard).toContainText('9am-12pm');
+});
+
+test('staff timeslots: class slots stay capped, staff slots do not', async ({ page }) => {
+  await stubNetwork(page, {
+    staffRecord: { id: 'recSTAFFC', fields: { 'Full Name': 'Cap Tester', Email: 'cap@example.com', Status: 'Active' } },
+  });
+  await page.goto('/index.html');
+  const { classSlots, staffSlots } = await page.evaluate(() => ({ classSlots: CLASS_SLOTS, staffSlots: STAFF_SLOTS }));
+  // The cap is an instructor-coverage limit on classes only; the general staff slots are uncapped.
+  for (const s of staffSlots) expect(classSlots).not.toContain(s);
+  expect(classSlots).toHaveLength(6);
 });
