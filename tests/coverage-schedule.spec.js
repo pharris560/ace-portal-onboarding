@@ -150,6 +150,77 @@ test('capacity: a class slot with 3 instructors already shows Full and blocks a 
   expect(errors, 'no uncaught page errors').toEqual([]);
 });
 
+test('day cap: Staff cannot sign up for a second morning slot on the same Saturday', async ({ page }) => {
+  const date = nextSaturdayISO();
+  const preSignups = [
+    { id: 'recMINE', fields: { 'Saturday Date': date, Slot: 'Falcons AM', 'Person Type': 'Staff', 'Signed Up By Name': 'Taylor Morgan', Staff: ['recSTAFF1'] } },
+  ];
+
+  await stubNetwork(page, {
+    staffRecord: { id: 'recSTAFF1', fields: { 'Full Name': 'Taylor Morgan', Email: 'taylor@example.com', Status: 'Active' } },
+    signups: preSignups,
+  });
+  await page.goto('/index.html');
+  await page.locator('#view-home button', { hasText: 'View My Schedule' }).click();
+  await page.locator('#view-coverage-role button', { hasText: "I'm on Staff" }).click();
+  await page.fill('#coverage-lookup-email', 'taylor@example.com');
+  await page.click('#coverage-lookup-btn');
+  await expect(page.locator('#view-coverage')).toBeVisible();
+
+  const firstCard = page.locator('#coverage-schedule > div').first();
+  const hawksRow = firstCard.locator('div.py-3', { hasText: 'Hawks AM' });
+  await hawksRow.locator('button', { hasText: 'Sign Up' }).click();
+
+  await expect(page.locator('#toast-container')).toContainText('one morning slot and one afternoon slot', { timeout: 10000 });
+  await expect(hawksRow).toContainText('Sign Up'); // still open - the click was rejected, not just slow
+  await expect(hawksRow).not.toContainText('Taylor Morgan');
+});
+
+test('day cap: Staff can sign up for one morning slot and one afternoon slot on the same Saturday', async ({ page }) => {
+  await stubNetwork(page, {
+    staffRecord: { id: 'recSTAFF1', fields: { 'Full Name': 'Taylor Morgan', Email: 'taylor@example.com', Status: 'Active' } },
+  });
+  await page.goto('/index.html');
+  await page.locator('#view-home button', { hasText: 'View My Schedule' }).click();
+  await page.locator('#view-coverage-role button', { hasText: "I'm on Staff" }).click();
+  await page.fill('#coverage-lookup-email', 'taylor@example.com');
+  await page.click('#coverage-lookup-btn');
+  await expect(page.locator('#view-coverage')).toBeVisible();
+
+  const firstCard = page.locator('#coverage-schedule > div').first();
+  const amRow = firstCard.locator('div.py-3', { hasText: 'Falcons AM' });
+  const pmRow = firstCard.locator('div.py-3', { hasText: 'Falcons PM' });
+
+  await amRow.locator('button', { hasText: 'Sign Up' }).click();
+  await expect(amRow.getByText('Taylor Morgan (You)')).toBeVisible({ timeout: 10000 });
+
+  await pmRow.locator('button', { hasText: 'Sign Up' }).click();
+  await expect(pmRow.getByText('Taylor Morgan (You)')).toBeVisible({ timeout: 10000 });
+});
+
+test('day cap: Volunteers are not subject to the one-AM/one-PM limit', async ({ page }) => {
+  const date = nextSaturdayISO();
+  const preSignups = [
+    { id: 'recMINE', fields: { 'Saturday Date': date, Slot: 'Falcons AM', 'Person Type': 'Volunteer', 'Signed Up By Name': 'Sam Lee', Volunteer: ['recVOL1'] } },
+  ];
+
+  await stubNetwork(page, {
+    volunteerRecord: { id: 'recVOL1', fields: { 'Full Name': 'Sam Lee', Email: 'sam@example.com', Status: 'Active' } },
+    signups: preSignups,
+  });
+  await page.goto('/index.html');
+  await page.locator('#view-home button', { hasText: 'View My Schedule' }).click();
+  await page.locator('#view-coverage-role button', { hasText: "I'm a Volunteer" }).click();
+  await page.fill('#coverage-lookup-email', 'sam@example.com');
+  await page.click('#coverage-lookup-btn');
+  await expect(page.locator('#view-coverage')).toBeVisible();
+
+  const firstCard = page.locator('#coverage-schedule > div').first();
+  const hawksRow = firstCard.locator('div.py-3', { hasText: 'Hawks AM' });
+  await hawksRow.locator('button', { hasText: 'Sign Up' }).click();
+  await expect(hawksRow.getByText('Sam Lee (You)')).toBeVisible({ timeout: 10000 });
+});
+
 test('capacity: a class slot with 2 instructors + 1 volunteer still allows a 3rd instructor, volunteers stay uncapped', async ({ page }) => {
   const date = nextSaturdayISO();
   const preSignups = [
