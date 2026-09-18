@@ -2318,6 +2318,7 @@ async function loadAdminCoverageSchedule(){
   }
 
   const records = res.records || [];
+  coverageRecordsCache = records; // reused by adminAddSignup's day-cap check (findStaffDayConflict)
   const byDate = {};
   dates.forEach(d => { byDate[d] = {}; COVERAGE_SLOTS.forEach(s => byDate[d][s] = []); });
   records.forEach(r => {
@@ -2394,6 +2395,15 @@ async function adminAddSignup(date, slot, selectId, overCap){
 
   if(overCap && person.type === 'Staff'){
     if(!confirm('This class already has ' + MAX_INSTRUCTORS_PER_CLASS + ' instructors signed up. Add ' + person.name + ' anyway?')) return;
+  }
+
+  if(person.type === 'Staff'){
+    const conflict = findStaffDayConflict(date, slot, person.recordId);
+    if(conflict){
+      if(!confirm(person.name + ' is already signed up for ' + conflict.fields['Slot'] + ' that '
+        + (halfOfDay(slot) === 'pm' ? 'afternoon' : 'morning')
+        + ' (Staff are normally limited to one morning and one afternoon slot per Saturday). Add anyway?')) return;
+    }
   }
 
   const fields = {
