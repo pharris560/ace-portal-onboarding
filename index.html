@@ -1733,6 +1733,36 @@ const STAFF_SLOT_HOURS = { 'ACE Staff All Day': '9am-3pm', 'ACE Staff AM': '9am-
    Volunteers are never capped on any slot — the cap is an instructor-coverage limit, not a headcount limit. */
 const CLASS_SLOTS = ['Falcons AM','Falcons PM','Hawks AM','Hawks PM','Eagles AM','Sparrows AM'];
 const MAX_INSTRUCTORS_PER_CLASS = 3;
+/* One-AM + one-PM-per-day cap for Staff only (2026-09-18, Pam's rule) — Volunteers are unrestricted,
+   same as the instructor-count cap above. 'ACE Staff All Day' spans both halves of the day, so it
+   occupies BOTH the morning and afternoon slot for that person: they can't hold it alongside anything
+   else that Saturday, and can't add it if they already hold an AM or PM slot that day. */
+const AM_SLOTS = ['Falcons AM','Hawks AM','Eagles AM','Sparrows AM','ACE Staff AM'];
+const PM_SLOTS = ['Falcons PM','Hawks PM','ACE Staff PM'];
+function halfOfDay(slot){
+  if(slot === 'ACE Staff All Day') return 'both';
+  if(AM_SLOTS.indexOf(slot) !== -1) return 'am';
+  if(PM_SLOTS.indexOf(slot) !== -1) return 'pm';
+  return null;
+}
+/* Returns the conflicting existing signup (from coverageRecordsCache), or null if none. Staff only. */
+function findStaffDayConflict(date, slot, recordId){
+  const half = halfOfDay(slot);
+  if(!half) return null;
+  const mine = coverageRecordsCache.filter(r =>
+    r.fields['Saturday Date'] === date && (r.fields['Staff'] || [])[0] === recordId
+  );
+  for(const r of mine){
+    const existingHalf = halfOfDay(r.fields['Slot']);
+    if(!existingHalf) continue;
+    if(half === 'both' || existingHalf === 'both' || existingHalf === half) return r;
+  }
+  return null;
+}
+function staffDayConflictMessage(conflict, slot){
+  const half = halfOfDay(slot) === 'pm' ? 'afternoon' : 'morning';
+  return "You're already signed up for " + conflict.fields['Slot'] + ' that ' + half + " — Staff can take one morning slot and one afternoon slot per Saturday.";
+}
 let coverageUser = null; /* {type:'Staff'|'Volunteer', recordId, name} */
 /* Role is now chosen explicitly on the #coverage entry screen rather than inferred from which
    table the email turns up in. That matters once a person exists in BOTH tables (same email as
@@ -1902,8 +1932,21 @@ async function bulkSignUp(slot, key){
   const bar = document.getElementById(key);
   const card = bar && bar.closest('[data-slot-card]');
   if(!card) return;
-  const dates = Array.from(card.querySelectorAll('.coverage-bulk-check:checked')).map(c => c.dataset.date);
+  let dates = Array.from(card.querySelectorAll('.coverage-bulk-check:checked')).map(c => c.dataset.date);
   if(!dates.length) return;
+
+  const dayConflicts = [];
+  if(coverageUser.type === 'Staff'){
+    dates = dates.filter(date => {
+      const conflict = findStaffDayConflict(date, slot, coverageUser.recordId);
+      if(conflict){ dayConflicts.push(date); return false; }
+      return true;
+    });
+  }
+  if(!dates.length){
+    showToast("You're already signed up for a conflicting slot on " + (dayConflicts.length === 1 ? 'that date' : 'all of those dates') + " — Staff can take one morning slot and one afternoon slot per Saturday.", 'error');
+    return;
+  }
 
   bar.disabled = true;
   const original = bar.textContent;
@@ -1929,12 +1972,13 @@ async function bulkSignUp(slot, key){
   if(created.length) notifySignupCreated(created);
 
   bar.textContent = original;
+  const skippedNote = dayConflicts.length ? (' (skipped ' + dayConflicts.length + ' date' + (dayConflicts.length === 1 ? '' : 's') + ' with a conflicting AM/PM slot)') : '';
   if(failed.length && created.length){
-    showToast('Signed up for ' + created.length + ', but ' + failed.length + ' could not be saved. Please retry those.', 'error');
+    showToast('Signed up for ' + created.length + ', but ' + failed.length + ' could not be saved. Please retry those.' + skippedNote, 'error');
   } else if(failed.length){
-    showToast(atErrorMsg('Could not sign up. Please try again.'), 'error');
-  } else {
-    showCenterConfirmation(created.length === 1 ? 'Signed up!' : ('Signed up for ' + created.length + ' Saturdays!'));
+    showToast(atErrorMsg('Could not sign up. Please try again.') + skippedNote, 'error');
+  } else if(created.length){
+    showCenterConfirmation((created.length === 1 ? 'Signed up!' : ('Signed up for ' + created.length + ' Saturdays!')) + skippedNote);
   }
   refreshCoverageView();
 }
@@ -2091,6 +2135,14 @@ async function signUpForSlot(date, slot){
     if(instructorCount >= MAX_INSTRUCTORS_PER_CLASS){
       showToast('That class already has ' + MAX_INSTRUCTORS_PER_CLASS + ' instructors signed up. Refreshing the schedule...', 'error');
       loadCoverageSchedule();
+      return;
+    }
+  }
+
+  if(coverageUser.type === 'Staff'){
+    const conflict = findStaffDayConflict(date, slot, coverageUser.recordId);
+    if(conflict){
+      showToast(staffDayConflictMessage(conflict, slot), 'error');
       return;
     }
   }
