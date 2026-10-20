@@ -921,6 +921,7 @@ tailwind.config = {
     <p class="text-xs text-gray-500 mb-4">Add, remove, or reassign who's covering each Saturday slot. The 3-instructor cap on class slots is a self-service guardrail — you can override it here.</p>
     <div id="admin-coverage-schedule"><p class="text-sm text-gray-500 text-center py-8">Loading...</p></div>
   </div>
+  <div class="neu-raised rounded-2xl p-6 mb-6" id="email-accounts-card"><p class="text-sm text-gray-500 text-center py-8">Loading...</p></div>
   <div class="neu-raised rounded-2xl p-6 mb-6">
     <h3 class="font-display text-base font-bold neon-text mb-5">Recent Activity</h3>
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-3" id="activity-feed"></div>
@@ -1012,6 +1013,7 @@ function showView(view){
   /* Auto-refresh dashboard */
   if(view==='dashboard'&&atToken&&allStudents.length===0)refreshAirtableData();
   if(view==='dashboard')loadAdminCoverageSchedule();
+  if(view==='dashboard'&&typeof loadEmailAccounts==='function'&&adminToken)loadEmailAccounts();
 }
 
 /* ===== User Indicator + Sign Out ===== */
@@ -3358,5 +3360,6 @@ function routeCoverageHash(){
 routeCoverageHash();
 window.addEventListener('hashchange', routeCoverageHash);
 </script>
+<script src="email-accounts.js"></script>
 </body>
 </html>

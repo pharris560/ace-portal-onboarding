@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Set up your ACE email</title>
+<style>
+  :root{--bg:#0b1626;--card:#13233b;--line:#223a5c;--text:#e6eefb;--muted:#9bb0cc;--accent:#4db8ff}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  main{max-width:760px;margin:0 auto;padding:32px 20px 64px}
+  h1{font-size:28px;margin:0 0 4px} h2{font-size:20px;margin:0 0 8px;color:var(--accent)} h3{font-size:16px;margin:18px 0 6px}
+  p,li{color:var(--text)} .muted{color:var(--muted);font-size:14px}
+  section{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px 22px;margin:18px 0}
+  ol,ul{padding-left:22px;margin:8px 0} li{margin:4px 0}
+  code{background:#0b1626;border:1px solid var(--line);padding:1px 6px;border-radius:6px;font-size:14px}
+  .tabs{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0 0}
+  .tabs button{background:var(--card);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:8px 14px;font:inherit;font-size:14px;cursor:pointer}
+  .tabs button[aria-selected=true]{border-color:var(--accent);color:var(--accent)}
+  .panel[hidden]{display:none}
+  .warn{border-left:4px solid #eab308;padding:8px 12px;background:#2a2410;border-radius:6px;font-size:14px}
+  a{color:var(--accent)}
+</style>
+</head>
+<body>
+<main>
+  <h1>Set up your ACE email</h1>
+  <p class="muted">Aviation Career Enrichment, Inc. — for staff and board members with a new @flyace.org address.</p>
+
+  <section>
+    <h2>1. First sign-in (everyone)</h2>
+    <ol>
+      <li>You received a <b>welcome email</b> at your personal address with your new ACE address, and a <b>text message</b> with a temporary password. Keep both.</li>
+      <li>On any computer, go to <code>outlook.office.com</code> and sign in with your ACE address and the temporary password.</li>
+      <li>Choose a <b>new password</b> when asked (at least 12 characters is best).</li>
+      <li>When asked for more information, install the free <b>Microsoft Authenticator</b> app on your phone and follow the steps. It protects your account and the student and family information in it.</li>
+    </ol>
+    <p class="muted">If the text never arrives or the password is rejected, email <a href="mailto:acestaff@flyace.org">acestaff@flyace.org</a> from your personal address and an administrator will send a new one.</p>
+  </section>
+
+  <h2 style="margin-top:28px">2. Add your mailbox to your devices</h2>
+  <div class="tabs" role="tablist" id="tabs"></div>
+
+  <section class="panel" data-tab="web">
+    <h3>Any computer — in your web browser</h3>
+    <p>Go to <code>outlook.office.com</code> and sign in. Nothing to install. You can also open Word, Excel and PowerPoint in the browser from the waffle menu (top left).</p>
+    <p class="muted">The free ACE plan includes the web and phone versions of Office, not the desktop programs.</p>
+  </section>
+
+  <section class="panel" data-tab="windows" hidden>
+    <h3>Windows</h3>
+    <ol>
+      <li>Open the <b>Outlook</b> app (Windows 11 includes it; otherwise install "Outlook (new)" from the Microsoft Store).</li>
+      <li>Choose <b>Add account</b>, enter your ACE address, and select <b>Continue</b>.</li>
+      <li>Sign in with your password and approve the Authenticator prompt.</li>
+    </ol>
+  </section>
+
+  <section class="panel" data-tab="mac" hidden>
+    <h3>Mac</h3>
+    <p><b>Easiest:</b> use <code>outlook.office.com</code> in your browser, or install the free <b>Microsoft Outlook</b> app from the App Store.</p>
+    <p><b>Apple Mail:</b></p>
+    <ol>
+      <li>Open <b>Mail</b> → <b>Mail ▸ Add Account…</b></li>
+      <li>Choose <b>Microsoft Exchange</b> and select <b>Continue</b>.</li>
+      <li>Enter your name and ACE address, choose <b>Sign In</b>, then <b>Sign In</b> again when asked to use Microsoft.</li>
+      <li>Enter your password and approve the Authenticator prompt. Tick Mail (and Calendar/Contacts if you like).</li>
+    </ol>
+  </section>
+
+  <section class="panel" data-tab="phone" hidden>
+    <h3>iPhone, iPad and Android — Outlook app (recommended)</h3>
+    <ol>
+      <li>Install <b>Microsoft Outlook</b> from the App Store or Google Play.</li>
+      <li>Open it, tap <b>Add Account</b>, enter your ACE address and tap <b>Continue</b>.</li>
+      <li>Sign in and approve the Authenticator prompt.</li>
+    </ol>
+    <h3>Built-in Mail app</h3>
+    <p><b>iPhone:</b> Settings → Mail → Accounts → Add Account → <b>Microsoft Exchange</b> → enter your ACE address and sign in.<br>
+       <b>Android:</b> use the Outlook app above; it is more reliable than the built-in mail app.</p>
+  </section>
+
+  <section class="panel" data-tab="personal" hidden>
+    <h3>Read ACE email from Gmail, Yahoo or another personal account</h3>
+    <div class="warn">Google is ending Gmail's old "check mail from other accounts" feature in 2026, and Microsoft does not allow the older password-only connection it used. Use one of the options below instead.</div>
+
+    <h3>Option A — Gmail app on your phone (ACE and personal mail in one place)</h3>
+    <ol>
+      <li>Open the <b>Gmail</b> app → tap your profile picture → <b>Add another account</b>.</li>
+      <li>Choose <b>Outlook, Hotmail and Live</b> (this also works for ACE's Microsoft accounts).</li>
+      <li>Enter your ACE address, sign in, and approve the Authenticator prompt.</li>
+    </ol>
+    <p class="muted">When you reply, check that the "From" address is your ACE address so families see the right sender.</p>
+
+    <h3>Option B — Outlook app (works with any provider)</h3>
+    <p>The Outlook app can hold your ACE account <b>and</b> your Gmail, Yahoo or other accounts together. Add ACE as in the Phone tab, then use <b>Settings → Add account</b> for your personal ones.</p>
+
+    <h3>Option C — Forwarding to your personal inbox</h3>
+    <p>An administrator can forward a copy of your ACE mail to your personal address. This works with any provider, but replies will come from your personal address unless you also add your ACE account as in Option A or B. Student and family information may then sit in an account ACE does not control, so ask only if you need it.</p>
+
+    <h3>Yahoo Mail app</h3>
+    <p>We have not confirmed that the Yahoo Mail app can connect to ACE's Microsoft accounts. Please use the Outlook app (Option B) with your Yahoo account added, or the web at <code>outlook.office.com</code>.</p>
+  </section>
+
+  <section class="panel" data-tab="help" hidden>
+    <h3>Common problems</h3>
+    <ul>
+      <li><b>"Incorrect password" on the first try:</b> type the temporary password exactly as texted (no spaces) or ask for a reset.</li>
+      <li><b>Asked for a code you don't have:</b> finish setting up the Authenticator app first (step 1).</li>
+      <li><b>Left your phone behind or got a new phone:</b> contact an administrator to reset your sign-in.</li>
+      <li><b>Never share your password or Authenticator approvals</b> — ACE staff will never ask for them.</li>
+    </ul>
+    <p>Still stuck? Email <a href="mailto:acestaff@flyace.org">acestaff@flyace.org</a> from your personal address.</p>
+  </section>
+</main>
+<script>
+(function(){
+  var tabs=[['web','Web'],['windows','Windows'],['mac','Mac'],['phone','iPhone / Android'],['personal','Gmail, Yahoo &amp; personal accounts'],['help','Help']];
+  var bar=document.getElementById('tabs');
+  function show(k){
+    document.querySelectorAll('.panel').forEach(function(p){p.hidden=p.getAttribute('data-tab')!==k;});
+    bar.querySelectorAll('button').forEach(function(b){b.setAttribute('aria-selected',b.getAttribute('data-k')===k);});
+    try{history.replaceState(null,'','#'+k);}catch(e){}
+  }
+  tabs.forEach(function(t){var b=document.createElement('button');b.type='button';b.setAttribute('role','tab');b.setAttribute('data-k',t[0]);b.innerHTML=t[1];b.onclick=function(){show(t[0]);};bar.appendChild(b);});
+  var start=(location.hash||'').slice(1);
+  show(tabs.some(function(t){return t[0]===start;})?start:'web');
+})();
+</script>
+</body>
+</html>

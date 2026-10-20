@@ -1,0 +1,98 @@
+// Email Accounts card (Administrator dashboard): server-verified admin sign-in, list, add people, preview, create.
+const { test, expect } = require('@playwright/test');
+
+const ADMIN = { id: 'recADMIN00000001', fields: { Email: 'pam@example.com', 'Full Name': 'Pam Admin', 'Account Type': { name: 'Administrator' } } }; // no hash: proxy scrubs it
+
+async function stub(page, { loginOk = true } = {}) {
+  const j = (o, status = 200) => ({ status, contentType: 'application/json', body: JSON.stringify(o) });
+  const calls = [];
+  const accounts = [
+    { id: 'recACCT0000000001', address: 'boardchair@flyace.org', displayName: 'Dana Cole – Board Chair', kind: 'Role', holderType: 'Board Member', holderName: 'Dana Cole', roleKey: 'boardchair', status: 'Waiting for move', pending: 'Create', forwarding: false, forwardTo: '', autoReply: '', lastError: '' },
+    { id: 'recACCT0000000002', address: '<img src=x onerror=window.__xss=1>@flyace.org', displayName: '<b>Bad</b> Name', kind: 'Personal', holderType: 'Staff', holderName: 'Bad', roleKey: '', status: 'Active', pending: '', forwarding: true, forwardTo: 'x@y.com', autoReply: '', lastError: '' }
+  ];
+  await page.route('**/.netlify/functions/airtable\\?**', (route) => route.fulfill(j({ records: [ADMIN] })));
+  await page.route('**/.netlify/functions/admin-login', async (route) => {
+    const body = route.request().postDataJSON();
+    calls.push({ fn: 'admin-login', body });
+    return route.fulfill(loginOk ? j({ token: 'tok123', name: 'Pam Admin', email: 'pam@example.com' }) : j({ error: 'Incorrect email or password' }, 401));
+  });
+  await page.route('**/.netlify/functions/email-admin', async (route) => {
+    const body = route.request().postDataJSON();
+    calls.push({ fn: 'email-admin', auth: route.request().headers()['authorization'], body });
+    if (body.action === 'overview') return route.fulfill(j({ accounts, candidates: { staff: [], board: [{ holderId: 'recBOARD00000001', holderType: 'Board Member', first: 'Nia', last: 'Hart', personalEmail: 'nia@gmail.com', mobile: '+14045550199', boardRole: 'Secretary' }] }, roleKeys: { boardchair: 'Board Chair', boardvicechair: 'Board Vice Chair', boardtreasurer: 'Board Treasurer', boardsecretary: 'Board Secretary' }, licensesUsed: 9, licenseLimit: 300 }));
+    if (body.action === 'preview') return route.fulfill(j({ rows: body.people.map(p => ({ ...p, address: (p.roleKey || 'nia.hart') + '@flyace.org', kind: p.roleKey ? 'Role' : 'Personal', problems: [], notes: [] })) }));
+    if (body.action === 'create') return route.fulfill(j({ results: [{ ok: true }], created: 1, skipped: 0 }));
+    return route.fulfill(j({ ok: true }));
+  });
+  await page.route(/cdn\.tailwindcss\.com|fonts\.googleapis\.com|fonts\.gstatic\.com/, (r) => r.fulfill({ status: 200, contentType: 'text/plain', body: '' }));
+  return calls;
+}
+async function signIn(page, pw = 'secret-pw-1') {
+  await page.goto('/index.html');
+  await page.evaluate(() => showView('login'));
+  await page.fill('#login-email', 'pam@example.com');
+  await page.fill('#login-password', pw);
+  await page.click('#login-submit-btn');
+}
+
+test('admin sign-in is verified by the server and unlocks the email card', async ({ page }) => {
+  const calls = await stub(page);
+  await signIn(page);
+  await expect(page.locator('#view-dashboard')).toBeVisible();
+  await expect(page.locator('#email-accounts-card')).toContainText('9 of 300 free licenses in use');
+  expect(calls.find(c => c.fn === 'admin-login').body).toEqual({ email: 'pam@example.com', password: 'secret-pw-1' });
+  expect(calls.find(c => c.fn === 'email-admin').auth).toBe('Bearer tok123');
+});
+
+test('wrong admin password: no dashboard, no email calls', async ({ page }) => {
+  const calls = await stub(page, { loginOk: false });
+  await signIn(page, 'wrong');
+  await expect(page.locator('#login-error')).toBeVisible();
+  await expect(page.locator('#view-dashboard')).toBeHidden();
+  expect(calls.some(c => c.fn === 'email-admin')).toBe(false);
+});
+
+test('account list renders names as text (no HTML injection)', async ({ page }) => {
+  await stub(page);
+  const errors = []; page.on('pageerror', e => { if (!/tailwind/.test(String(e))) errors.push(String(e)); });
+  await signIn(page);
+  await expect(page.locator('#email-accounts-card')).toContainText('<b>Bad</b> Name');
+  expect(await page.evaluate(() => window.__xss)).toBeUndefined();
+  await expect(page.locator('#email-accounts-card')).toContainText('Waiting: Create');
+  expect(errors).toEqual([]);
+});
+
+test('add a board member: review addresses, then create sends the right request', async ({ page }) => {
+  const calls = await stub(page);
+  await signIn(page);
+  await page.locator('#email-accounts-card button', { hasText: 'Add people' }).click();
+  await expect(page.locator('#email-accounts-card')).toContainText('Nia Hart');
+  await page.locator('#email-accounts-card input[type=checkbox]').first().check();
+  await page.locator('#email-accounts-card select').first().selectOption('boardsecretary'); // role address
+  await page.locator('#email-accounts-card button', { hasText: 'Review addresses' }).click();
+  await expect(page.locator('#email-accounts-card')).toContainText('✓ Ready');
+  await page.locator('#email-accounts-card button', { hasText: 'Create 1 account' }).click();
+  await expect(page.locator('#email-accounts-card')).toContainText('Email Accounts (@flyace.org)');
+  const create = calls.find(c => c.body && c.body.action === 'create').body;
+  expect(create.people[0]).toMatchObject({ first: 'Nia', last: 'Hart', holderType: 'Board Member', holderId: 'recBOARD00000001', roleKey: 'boardsecretary' });
+});
+
+test('spreadsheet upload parses quoted CSV rows into the review step', async ({ page }) => {
+  const calls = await stub(page);
+  await signIn(page);
+  await page.locator('#email-accounts-card button', { hasText: 'Upload spreadsheet' }).click();
+  await page.fill('#email-accounts-card textarea', 'first,last,personalEmail,mobile,type,role\n"Ann ""AJ""",Lee,aj@gmail.com,404-555-0101,staff,\nSam,Ng,sam@yahoo.com,404-555-0102,board,boardtreasurer\n');
+  await page.locator('#email-accounts-card button', { hasText: 'Review addresses' }).click();
+  await expect(page.locator('#email-accounts-card')).toContainText('2 of 2 ready');
+  const prev = calls.find(c => c.body && c.body.action === 'preview').body.people;
+  expect(prev[0].first).toBe('Ann "AJ"');
+  expect(prev[1]).toMatchObject({ holderType: 'Board Member', roleKey: 'boardtreasurer' });
+});
+
+test('signing out drops the admin token', async ({ page }) => {
+  await stub(page);
+  await signIn(page);
+  await expect(page.locator('#view-dashboard')).toBeVisible();
+  await page.evaluate(() => signOut());
+  expect(await page.evaluate(() => adminToken)).toBeNull();
+});
