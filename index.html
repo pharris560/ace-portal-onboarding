@@ -1000,6 +1000,7 @@ const STAGE_LABELS = {'Incomplete':'Incomplete','Registration Fees':'Reg. Fees',
    Admin accounts live in Portal Accounts with Account Type = 'Administrator'.
    Sign in through the standard login form — loginStudent() routes admins to the dashboard. */
 let adminAuthenticated = false;
+let adminToken = null; /* signed server session for the email-admin tools (memory only) */
 
 /* ===== View Switching ===== */
 function showView(view){
@@ -1035,6 +1036,7 @@ function signOut(){
   clearTimeout(_autoSignoutTimer);
   loggedInUser=null;
   adminAuthenticated=false;
+  adminToken=null;
   currentLookupRecordId=null;
   currentLookupFields={};
   /* Privacy: wipe any student data left in this browser session so the next user never sees it. */
@@ -1193,10 +1195,21 @@ async function loginStudent(){
   }
 
   const acct=data.records[0];
-  const storedHash=acct.fields['Password Hash'];
-  const inputHash=await hashPassword(pw);
+  const acctTypeRaw=acct.fields['Account Type']?.name||acct.fields['Account Type'];
+  let passwordOk=false;
+  if(acctTypeRaw==='Administrator'){
+    /* Administrators are verified on the server (admin-login); their hash never reaches the browser. */
+    try{
+      const ar=await fetch('/.netlify/functions/admin-login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pw})});
+      const aj=await ar.json().catch(()=>({}));
+      if(ar.ok&&aj.token){adminToken=aj.token;passwordOk=true;}
+      else if(ar.status===429){errEl.textContent=aj.error||'Too many attempts. Try again later.';errEl.classList.remove('hidden');btn.textContent='SIGN IN';btn.disabled=false;return;}
+    }catch(_){}
+  } else {
+    passwordOk=(await hashPassword(pw))===acct.fields['Password Hash'];
+  }
 
-  if(inputHash!==storedHash){
+  if(!passwordOk){
     errEl.textContent='Incorrect password. Please try again.';errEl.classList.remove('hidden');
     btn.textContent='SIGN IN';btn.disabled=false;return;
   }
