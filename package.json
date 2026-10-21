@@ -4,7 +4,8 @@
   "scripts": {
     "test:smoke": "playwright test",
     "test:install": "playwright install chromium",
-    "verify:record": "node tests/verify-record.mjs"
+    "verify:record": "node tests/verify-record.mjs",
+    "test:server": "node --test tests/server-login.test.js"
   },
   "dependencies": {
     "@netlify/blobs": "*"

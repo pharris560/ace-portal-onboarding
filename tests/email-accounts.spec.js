@@ -11,10 +11,10 @@ async function stub(page, { loginOk = true, baseSource = 'airtable' } = {}) {
     { id: 'recACCT0000000002', address: '<img src=x onerror=window.__xss=1>@flyace.org', displayName: '<b>Bad</b> Name', kind: 'Personal', holderType: 'Staff', holderName: 'Bad', roleKey: '', status: 'Active', pending: '', forwarding: true, forwardTo: 'x@y.com', autoReply: '', lastError: '' }
   ];
   await page.route('**/.netlify/functions/airtable\\?**', (route) => route.fulfill(j({ records: [ADMIN] })));
-  await page.route('**/.netlify/functions/admin-login', async (route) => {
+  await page.route('**/.netlify/functions/portal-login', async (route) => {
     const body = route.request().postDataJSON();
-    calls.push({ fn: 'admin-login', body });
-    return route.fulfill(loginOk ? j({ token: 'tok123', name: 'Pam Admin', email: 'pam@example.com' }) : j({ error: 'Incorrect email or password' }, 401));
+    calls.push({ fn: 'portal-login', body });
+    return route.fulfill(loginOk ? j({ token: 'tok123', rec: 'recADMIN', role: 'admin', type: 'Administrator', expiresInMinutes: 30, name: 'Pam Admin', email: 'pam@example.com' }) : j({ error: 'Incorrect password. Please try again.' }, 401));
   });
   await page.route('**/.netlify/functions/base-info', (route) => route.fulfill(j({ name: '2026 - 2027 ACE Student Enrollment', baseId: 'appFVg5UNlwzJMuaY', source: baseSource })));
   await page.route('**/.netlify/functions/email-admin', async (route) => {
@@ -41,7 +41,7 @@ test('admin sign-in is verified by the server and unlocks the email card', async
   await signIn(page);
   await expect(page.locator('#view-dashboard')).toBeVisible();
   await expect(page.locator('#email-accounts-card')).toContainText('9 of 300 free licenses in use');
-  expect(calls.find(c => c.fn === 'admin-login').body).toEqual({ email: 'pam@example.com', password: 'secret-pw-1' });
+  expect(calls.find(c => c.fn === 'portal-login').body).toEqual({ email: 'pam@example.com', password: 'secret-pw-1' });
   expect(calls.find(c => c.fn === 'email-admin').auth).toBe('Bearer tok123');
 });
 

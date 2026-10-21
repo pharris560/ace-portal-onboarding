@@ -5,7 +5,20 @@ const crypto = require('crypto');
 
 const BASE_ID = 'appFVg5UNlwzJMuaY';
 const TABLE_ACCOUNTS = 'tblwJ9C1BQIMGMzKx';
-const SESSION_MINUTES = 30;
+const SESSION_MINUTES = 30;          /* Administrator sessions */
+const MEMBER_SESSION_MINUTES = 120;  /* everyone else: automatic sign-out after 2 hours */
+const COOKIE_NAME = 'ace_session';
+
+/* Account Type (Portal Accounts) -> portal role. Staff, Volunteer and Board sign in with an
+   emailed one-time code, never a password. Every other type is a parent/student password login. */
+const CODE_ROLES = ['staff', 'volunteer', 'board'];
+function roleFor(accountType) {
+  const t = String(accountType?.name ?? accountType ?? '').trim().toLowerCase();
+  if (t === 'administrator') return 'admin';
+  if (t === 'staff' || t === 'volunteer' || t === 'board') return t;
+  return 'parent';
+}
+const sessionMinutes = (role) => (role === 'admin' ? SESSION_MINUTES : MEMBER_SESSION_MINUTES);
 
 function key() {
   const pat = process.env.AIRTABLE_PAT;
@@ -15,8 +28,8 @@ function key() {
 
 const b64 = (buf) => Buffer.from(buf).toString('base64url');
 
-function signToken(claims) {
-  const payload = b64(JSON.stringify({ ...claims, exp: Date.now() + SESSION_MINUTES * 60 * 1000 }));
+function signToken(claims, minutes = SESSION_MINUTES) {
+  const payload = b64(JSON.stringify({ ...claims, exp: Date.now() + minutes * 60 * 1000 }));
   const sig = b64(crypto.createHmac('sha256', key()).update(payload).digest());
   return payload + '.' + sig;
 }
@@ -48,6 +61,39 @@ async function requireAdmin(event) {
   return { rec: claims.rec, email: acct.fields.Email, name: acct.fields['Full Name'] };
 }
 
+/* ---- HttpOnly session cookie (all roles) ---- */
+function sessionCookie(token, minutes) {
+  return COOKIE_NAME + '=' + token + '; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=' + Math.round(minutes * 60);
+}
+const clearCookie = () => COOKIE_NAME + '=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0';
+
+function readCookie(event) {
+  const raw = event.headers?.cookie || event.headers?.Cookie || '';
+  for (const part of raw.split(';')) {
+    const i = part.indexOf('=');
+    if (i > 0 && part.slice(0, i).trim() === COOKIE_NAME) return part.slice(i + 1).trim();
+  }
+  return '';
+}
+
+/* Returns { rec, email, name, role } for a genuine, unexpired cookie whose account still exists.
+   The role is re-read from Airtable every time, so changing someone's Account Type takes effect
+   immediately, not when their cookie expires. */
+async function getSession(event) {
+  const claims = verifyToken(readCookie(event));
+  if (!claims || claims.kind !== 'portal' || !claims.rec) return null;
+  const acct = await airtable('GET', '/' + BASE_ID + '/' + TABLE_ACCOUNTS + '/' + encodeURIComponent(claims.rec));
+  if (!acct) return null;
+  return { rec: acct.id, email: acct.fields.Email, name: acct.fields['Full Name'], role: roleFor(acct.fields['Account Type']) };
+}
+
+/* null unless the signed-in person holds one of the allowed roles. Used by every function that
+   later replaces the open proxy. */
+async function requireRole(event, roles) {
+  const s = await getSession(event);
+  return s && roles.includes(s.role) ? s : null;
+}
+
 async function airtable(method, path, body) {
   const res = await fetch('https://api.airtable.com/v0' + path, {
     method,
@@ -60,4 +106,7 @@ async function airtable(method, path, body) {
 
 const json = (statusCode, obj) => ({ statusCode, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(obj) });
 
-module.exports = { BASE_ID, TABLE_ACCOUNTS, signToken, verifyToken, requireAdmin, airtable, json };
+module.exports = {
+  BASE_ID, TABLE_ACCOUNTS, CODE_ROLES, roleFor, sessionMinutes, signToken, verifyToken, requireAdmin,
+  sessionCookie, clearCookie, readCookie, getSession, requireRole, airtable, json
+};

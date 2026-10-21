@@ -18,7 +18,7 @@ async function setup(page) {
     if (url.includes('tbluHnJc9VM6l4U6V')) { tableCalls.push(url); return route.fulfill(j({ records: STUDENTS })); }
     return route.fulfill(j({ records: [ADMIN] }));
   });
-  await page.route('**/.netlify/functions/admin-login', (r) => r.fulfill(j({ token: 't', name: 'Pam Admin', email: 'pam@example.com' })));
+  await page.route('**/.netlify/functions/portal-login', (r) => r.fulfill(j({ token: 't', rec: 'recADMIN', role: 'admin', type: 'Administrator', expiresInMinutes: 30, name: 'Pam Admin', email: 'pam@example.com' })));
   await page.route('**/.netlify/functions/base-info', (r) => r.fulfill(j({ name: '2026 - 2027 ACE Student Enrollment', source: 'airtable' })));
   await page.route('**/.netlify/functions/email-admin', (r) => r.fulfill(j({ accounts: [], candidates: { staff: [], board: [] }, roleKeys: {}, licensesUsed: 0, licenseLimit: 300 })));
   await page.route(/cdn\.tailwindcss\.com|fonts\.googleapis\.com|fonts\.gstatic\.com/, (r) => r.fulfill({ status: 200, contentType: 'text/plain', body: '' }));

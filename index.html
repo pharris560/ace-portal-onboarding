@@ -1052,8 +1052,20 @@ function updateUserIndicator(){
     ind.style.display='none';
   }
 }
+/* Everyone is signed out automatically: 2 hours (administrators 30 minutes). The server cookie
+   expires at the same moment, so this is a courtesy, not the enforcement. */
+let _sessionTimer=null;
+function startSessionTimer(minutes){
+  clearTimeout(_sessionTimer);
+  _sessionTimer=setTimeout(function(){
+    signOut();
+    if(typeof showToast==='function')showToast('You were signed out automatically. Please sign in again.','info');
+  },(minutes||120)*60*1000);
+}
 function signOut(){
   clearTimeout(_autoSignoutTimer);
+  clearTimeout(_sessionTimer);
+  try{fetch('/.netlify/functions/portal-session',{method:'POST',keepalive:true});}catch(_){}
   loggedInUser=null;
   adminAuthenticated=false;
   adminToken=null;
@@ -1201,49 +1213,30 @@ async function loginStudent(){
   const btn=document.getElementById('login-submit-btn');
   btn.textContent='Signing in...';btn.disabled=true;
 
-  /* Look up account */
-  const url='/'+AT_BASE_ID+'/'+AT_TABLE_ACCOUNTS+'?filterByFormula='+encodeURIComponent("LOWER({Email})='"+email.toLowerCase()+"'");
-  const data=await atFetch(url);
-
-  if(data===null){
-    errEl.textContent=atErrorMsg('Could not sign you in right now.');errEl.classList.remove('hidden');
+  /* The server looks the account up, checks the password, decides the role and sets the session cookie. */
+  let lr,lj={};
+  try{
+    lr=await fetch('/.netlify/functions/portal-login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pw})});
+    lj=await lr.json().catch(()=>({}));
+  }catch(_){lr=null;}
+  if(!lr||!lr.ok||!lj.role){
+    errEl.textContent=!lr?'Could not sign you in right now. Please try again.':(lj.error||'Could not sign you in right now.');
+    errEl.classList.remove('hidden');
     btn.textContent='SIGN IN';btn.disabled=false;return;
   }
-  if(!data.records||data.records.length===0){
-    errEl.textContent='No account found with this email. Please check your email or create a new account.';errEl.classList.remove('hidden');
-    btn.textContent='SIGN IN';btn.disabled=false;return;
-  }
-
-  const acct=data.records[0];
-  const acctTypeRaw=acct.fields['Account Type']?.name||acct.fields['Account Type'];
-  let passwordOk=false;
-  if(acctTypeRaw==='Administrator'){
-    /* Administrators are verified on the server (admin-login); their hash never reaches the browser. */
-    try{
-      const ar=await fetch('/.netlify/functions/admin-login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pw})});
-      const aj=await ar.json().catch(()=>({}));
-      if(ar.ok&&aj.token){adminToken=aj.token;passwordOk=true;}
-      else if(ar.status===429){errEl.textContent=aj.error||'Too many attempts. Try again later.';errEl.classList.remove('hidden');btn.textContent='SIGN IN';btn.disabled=false;return;}
-    }catch(_){}
-  } else {
-    passwordOk=(await hashPassword(pw))===acct.fields['Password Hash'];
-  }
-
-  if(!passwordOk){
-    errEl.textContent='Incorrect password. Please try again.';errEl.classList.remove('hidden');
-    btn.textContent='SIGN IN';btn.disabled=false;return;
-  }
+  if(lj.token)adminToken=lj.token;
+  startSessionTimer(lj.expiresInMinutes);
 
   /* Login successful */
-  loggedInUser={email:acct.fields.Email,name:acct.fields['Full Name'],type:acct.fields['Account Type']?.name||acct.fields['Account Type'],recordId:acct.id};
+  loggedInUser={email:lj.email,name:lj.name,type:lj.type,recordId:lj.rec,role:lj.role};
   updateUserIndicator();
 
   /* Update last login — non-blocking, ignore failures */
-  atFetch('/'+AT_BASE_ID+'/'+AT_TABLE_ACCOUNTS+'/'+acct.id,{method:'PATCH',body:JSON.stringify({fields:{'Last Login':new Date().toLocaleString()}})});
+  atFetch('/'+AT_BASE_ID+'/'+AT_TABLE_ACCOUNTS+'/'+lj.rec,{method:'PATCH',body:JSON.stringify({fields:{'Last Login':new Date().toLocaleString()}})});
 
   /* Route based on account type */
   const acctType=loggedInUser.type;
-  if(acctType==='Administrator'){
+  if(loggedInUser.role==='admin'){
     adminAuthenticated=true;
     showToast('Signed in as '+loggedInUser.name+' (Administrator)','success');
     showView('dashboard');

@@ -20,6 +20,11 @@ const reply = (statusCode, message) => ({
   statusCode, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: { message } })
 });
 const isType = (t, def) => { const s = String(t ?? '').toLowerCase(); return s === def.id.toLowerCase() || s === def.name; };
+/* The only Account Types the public registration flow ever writes. Administrator, Staff, Volunteer
+   and Board are granted in Airtable only, never from a browser. */
+const BROWSER_TYPES = ['new applicant', 'existing student'];
+const isOtherType = (v) => { const s = String(v?.name ?? v ?? '').trim().toLowerCase(); return s !== '' && !BROWSER_TYPES.includes(s); };
+const isProtectedValue = (v) => ['administrator', 'staff', 'volunteer', 'board'].includes(String(v?.name ?? v ?? '').trim().toLowerCase());
 const isAdminValue = (v) => String(v?.name ?? v ?? '').trim().toLowerCase() === 'administrator';
 
 async function at(PAT, method, path) {
@@ -65,14 +70,17 @@ exports.handler = async function (event) {
       /* Writes: no admin can be created, promoted, edited or removed from the browser. */
       if (body && body.performUpsert) return reply(403, 'Forbidden.');
       const rows = body ? (Array.isArray(body.records) ? body.records : [body]) : [];
-      for (const row of rows) if (isAdminValue(row?.fields?.['Account Type'])) return reply(403, 'Administrator accounts can only be changed in Airtable.');
+      for (const row of rows) {
+        if (isAdminValue(row?.fields?.['Account Type'])) return reply(403, 'Administrator accounts can only be changed in Airtable.');
+        if (isOtherType(row?.fields?.['Account Type'])) return reply(403, 'That account type can only be set in Airtable.');
+      }
       const ids = new Set();
       if (segs[2]) ids.add(segs[2]);
       rows.forEach(r => r?.id && ids.add(r.id));
       new URLSearchParams(cleanQuery).forEach((v, k) => { if (k.startsWith('records')) ids.add(v); });
       for (const id of ids) {
         const cur = await at(PAT, 'GET', '/' + BASE + '/' + ACCOUNTS.id + '/' + encodeURIComponent(id));
-        if (!cur || isAdminValue(cur.fields?.['Account Type'])) return reply(403, 'Administrator accounts can only be changed in Airtable.');
+        if (!cur || isProtectedValue(cur.fields?.['Account Type'])) return reply(403, 'Administrator, staff, volunteer and board accounts can only be changed in Airtable.');
       }
     }
   }
