@@ -983,6 +983,7 @@ const F = {
   status: 'fldN7rJY04UdUoqrn',
   stage: 'fldoGmKcbKN5q8T0R',
   aceClass: 'fld4UyibXcJF6Jma0',
+  session: 'fldQDbLbNGhcTpf8s',
   missingDocs: 'fldOTtMcX59trxH4G',
   email: 'fldoxaHnlJN2wZTXU',
   phone: 'fldsBmzoeRK9p126R',
@@ -2501,7 +2502,7 @@ function showCenterConfirmation(msg){
 async function fetchAllStudents(){
   allStudents=[];
   let cursor=null;
-  const fields=[F.firstName,F.lastName,F.studentId,F.status,F.stage,F.aceClass,F.email,F.phone,F.missingDocs,F.address,F.city,F.parentFirstName,F.parentLastName,F.parentPhone,F.parentEmail,F.birthday,F.appDate,F.newReturning].map(f=>'fields%5B%5D='+f).join('&');
+  const fields=[F.firstName,F.lastName,F.studentId,F.status,F.stage,F.aceClass,F.session,F.email,F.phone,F.missingDocs,F.address,F.city,F.parentFirstName,F.parentLastName,F.parentPhone,F.parentEmail,F.birthday,F.appDate,F.newReturning].map(f=>'fields%5B%5D='+f).join('&');
   do {
     const url='/'+AT_BASE_ID+'/'+AT_TABLE_ALL+'?returnFieldsByFieldId=true&'+fields+(cursor?'&offset='+cursor:'');
     const data=await atFetch(url);
@@ -2524,6 +2525,23 @@ async function refreshAirtableData(){
   document.getElementById('refresh-btn').textContent='↻ Refresh';
 }
 
+/* Class labels with the session in front: ACE Class "Hawks" + Session "AM Session 9am-11:30am" -> "AM Hawks".
+   Only the four real classes get a prefix; anything else (Graduating Senior, DF Waiver, ...) is shown as stored. */
+const SESSION_CLASSES=['Sparrows','Hawks','Falcons','Eagles'];
+function classLabels(classes,sessions){
+  const ses=[...new Set((sessions||[]).map(x=>{const t=String(x&&x.name||x||'').trim().toUpperCase();return t.startsWith('AM')?'AM':t.startsWith('PM')?'PM':'';}).filter(Boolean))].sort();
+  const out=[];
+  (classes||[]).forEach(c=>{
+    if(SESSION_CLASSES.includes(c)&&ses.length)ses.forEach(x=>out.push(x+' '+c));
+    else out.push(c);
+  });
+  return out;
+}
+function classLabelSort(a,b){
+  const rank=x=>x.startsWith('AM ')?0:x.startsWith('PM ')?1:2;
+  return rank(a)-rank(b)||a.localeCompare(b);
+}
+
 /* US phone display: 4045550101 / +1 404-555-0101 / 404.555.0101 -> (404) 555-0101. Anything else is shown as stored. */
 function formatPhone(v){
   const raw=String(v||'').trim();
@@ -2538,7 +2556,7 @@ function renderPipeline(){
   const out=document.getElementById('student-results');
   const countEl=document.getElementById('student-count');
   if(!out)return;
-  const classFilter=document.getElementById('class-filter').value;
+  const classSel=document.getElementById('class-filter');
   const statusSel=document.getElementById('status-filter');
   const q=(document.getElementById('student-search').value||'').trim().toLowerCase();
   const pick=(f,name,id)=>{const v=f[id]!==undefined?f[id]:f[name];return (v&&v.name)||v||'';};
@@ -2550,9 +2568,17 @@ function renderPipeline(){
   statusSel.value=want;if(statusSel.value!==want)statusSel.value='Active';
   const statusFilter=statusSel.value;
 
+  const labelsOf=r=>{const f=r.fields||{};const v=x=>x&&x.name||x;return classLabels((f[F.aceClass]||f['ACE Class']||[]).map(v),(f[F.session]||f['Session']||[]).map(v));};
+  /* Class options come from the data: "AM Hawks", "PM Hawks", ... (AM first) */
+  const wantClass=classSel.value;
+  const labelSet=[...new Set(allStudents.flatMap(labelsOf))].sort(classLabelSort);
+  classSel.innerHTML='<option value="">All Classes</option>'+labelSet.map(x=>'<option value="'+escapeHtml(x)+'">'+escapeHtml(x)+'</option>').join('');
+  classSel.value=wantClass;if(classSel.value!==wantClass)classSel.value='';
+  const classFilter=classSel.value;
+
   const rows=allStudents.map(r=>{
     const f=r.fields||{};
-    const classes=(f['ACE Class']||f[F.aceClass]||[]).map(c=>c.name||c);
+    const classes=labelsOf(r).sort(classLabelSort);
     const first=String(pick(f,'First Name',F.firstName)).trim(), last=String(pick(f,'Last Name',F.lastName)).trim();
     const pFirst=String(pick(f,'Parent First Name',F.parentFirstName)).trim(), pLast=String(pick(f,'Parent Last Name',F.parentLastName)).trim();
     return {

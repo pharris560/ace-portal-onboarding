@@ -2,8 +2,8 @@
 const { test, expect } = require('@playwright/test');
 
 const ADMIN = { id: 'recADMIN00000001', fields: { Email: 'pam@example.com', 'Full Name': 'Pam Admin', 'Account Type': { name: 'Administrator' } } };
-const F = { first: 'flduMlCg6WQYp1603', last: 'fldaIIUPWQqHMxUbG', id: 'fld83rlR3Ofe9zYFi', status: 'fldN7rJY04UdUoqrn', stage: 'fldoGmKcbKN5q8T0R', cls: 'fld4UyibXcJF6Jma0', pFirst: 'fldqJs1uDhrOJchi7', pLast: 'fldeQZnY89hXgeK76', pPhone: 'fld4SUbeEjG6Zin5l', pEmail: 'fldHE8GLMmh1GZqz6', email: 'fldoxaHnlJN2wZTXU' };
-const student = (n, first, last, status, extra = {}) => ({ id: 'recS' + n, createdTime: '2026-09-01T00:00:00.000Z', fields: { [F.first]: first, [F.last]: last, [F.id]: 'ACE-' + n, [F.status]: status, [F.stage]: 'Complete ', [F.cls]: ['Falcons'], ...extra } });
+const F = { first: 'flduMlCg6WQYp1603', last: 'fldaIIUPWQqHMxUbG', id: 'fld83rlR3Ofe9zYFi', status: 'fldN7rJY04UdUoqrn', stage: 'fldoGmKcbKN5q8T0R', cls: 'fld4UyibXcJF6Jma0', ses: 'fldQDbLbNGhcTpf8s', pFirst: 'fldqJs1uDhrOJchi7', pLast: 'fldeQZnY89hXgeK76', pPhone: 'fld4SUbeEjG6Zin5l', pEmail: 'fldHE8GLMmh1GZqz6', email: 'fldoxaHnlJN2wZTXU' };
+const student = (n, first, last, status, extra = {}) => ({ id: 'recS' + n, createdTime: '2026-09-01T00:00:00.000Z', fields: { [F.first]: first, [F.last]: last, [F.id]: 'ACE-' + n, [F.status]: status, [F.stage]: 'Complete ', [F.cls]: ['Falcons'], [F.ses]: ['AM Session 9am-11:30am'], ...extra } });
 const STUDENTS = [
   student(1, 'Ada', 'Lovelace', 'Active', { [F.pFirst]: 'Byron', [F.pLast]: 'Lovelace', [F.pPhone]: '(404) 555-0101', [F.pEmail]: 'byron@example.com' }),
   student(2, 'Adam', 'Withdrawn', 'Withdrawn', { [F.pFirst]: 'Pat', [F.pLast]: 'Withdrawn' }),
@@ -52,6 +52,20 @@ test('search by name shows the student; expanding shows parent name, phone and e
   await expect(d.locator('a[href="mailto:byron@example.com"]')).toBeVisible();
 });
 
+test('classes show as AM/PM + class; students in both sessions appear under both', async ({ page }) => {
+  await setup(page);
+  const out = await page.evaluate(() => [
+    classLabels(['Hawks'], ['AM Session 9am-11:30am']),
+    classLabels(['Falcons'], ['PM Session 12:30pm-3pm']),
+    classLabels(['Eagles'], ['PM Session 12:30pm-3pm', 'AM Session 9am-11:30am']),
+    classLabels(['Hawks'], []),
+    classLabels(['Graduating Senior', 'Sparrows'], ['AM Session 9am-11:30am']),
+  ]);
+  expect(out).toEqual([['AM Hawks'], ['PM Falcons'], ['AM Eagles', 'PM Eagles'], ['Hawks'], ['Graduating Senior', 'AM Sparrows']]);
+  const opts = await page.locator('#class-filter option').allTextContents();
+  expect(opts).toEqual(['All Classes', 'AM Falcons']);
+});
+
 test('phone numbers display as (404) 555-0101 however they are stored', async ({ page }) => {
   await setup(page);
   const out = await page.evaluate(() => ['4045550101', '+1 404-555-0101', '1.404.555.0101', '(404) 555-0101', '555-0101', '', '+44 20 7946 0958'].map(formatPhone));
@@ -71,11 +85,13 @@ test('status filter: All Statuses reveals withdrawn students; searching by paren
 
 test('picking a Class alone lists that class\'s active students (no typing needed)', async ({ page }) => {
   await setup(page);
-  await page.selectOption('#class-filter', 'Falcons');
+  await page.selectOption('#class-filter', 'AM Falcons');
   await expect(page.locator('.student-row')).toHaveCount(2); // Ada + the evil-named one; Adam is Withdrawn
-  await expect(page.locator('#student-count')).toContainText('in Falcons');
-  await page.selectOption('#class-filter', 'Sparrows');
+  await expect(page.locator('#student-count')).toContainText('in AM Falcons');
+  await expect(page.locator('.student-row').first()).toContainText('AM Falcons');
+  await page.fill('#student-search', 'zzzz');
   await expect(page.locator('#student-results')).toContainText('No students found');
+  await page.fill('#student-search', '');
   await page.selectOption('#class-filter', '');
   await expect(page.locator('.student-row')).toHaveCount(0);
 });
