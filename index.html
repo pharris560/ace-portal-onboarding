@@ -2524,6 +2524,15 @@ async function refreshAirtableData(){
   document.getElementById('refresh-btn').textContent='↻ Refresh';
 }
 
+/* US phone display: 4045550101 / +1 404-555-0101 / 404.555.0101 -> (404) 555-0101. Anything else is shown as stored. */
+function formatPhone(v){
+  const raw=String(v||'').trim();
+  let d=raw.replace(/\D/g,'');
+  if(d.length===11&&d[0]==='1')d=d.slice(1);
+  if(d.length!==10)return raw;
+  return '('+d.slice(0,3)+') '+d.slice(3,6)+'-'+d.slice(6);
+}
+
 /* ===== Admissions Pipeline: student search ===== */
 function renderPipeline(){
   const out=document.getElementById('student-results');
@@ -2569,7 +2578,7 @@ function renderPipeline(){
   if(!rows.length){out.innerHTML='<p class="text-sm text-gray-500 py-6 text-center">No students found. Try fewer letters, or set Status to “All Statuses”.</p>';return;}
   const line=(label,val,kind)=>{
     if(!val)return '<div><p class="text-xs uppercase tracking-widest text-gray-500">'+label+'</p><p class="text-base text-gray-500">—</p></div>';
-    const v=escapeHtml(val);
+    const v=escapeHtml(kind==='tel'?formatPhone(val):val);
     const href=kind==='tel'?'tel:'+escapeHtml(val.replace(/[^\d+]/g,'')):kind==='mail'?'mailto:'+v:'';
     return '<div><p class="text-xs uppercase tracking-widest text-gray-500">'+label+'</p><p class="text-base text-white break-words">'+(href?'<a href="'+href+'" class="underline">'+v+'</a>':v)+'</p></div>';
   };

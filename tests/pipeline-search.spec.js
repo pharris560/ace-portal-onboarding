@@ -52,6 +52,12 @@ test('search by name shows the student; expanding shows parent name, phone and e
   await expect(d.locator('a[href="mailto:byron@example.com"]')).toBeVisible();
 });
 
+test('phone numbers display as (404) 555-0101 however they are stored', async ({ page }) => {
+  await setup(page);
+  const out = await page.evaluate(() => ['4045550101', '+1 404-555-0101', '1.404.555.0101', '(404) 555-0101', '555-0101', '', '+44 20 7946 0958'].map(formatPhone));
+  expect(out).toEqual(['(404) 555-0101', '(404) 555-0101', '(404) 555-0101', '(404) 555-0101', '555-0101', '', '+44 20 7946 0958']);
+});
+
 test('status filter: All Statuses reveals withdrawn students; searching by parent name works', async ({ page }) => {
   await setup(page);
   await page.fill('#student-search', 'ada');
