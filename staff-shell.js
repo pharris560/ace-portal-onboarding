@@ -1,14 +1,34 @@
 /* Sidebar behaviour + cursor trail, matching the ACE Staff Portal look.
    Loaded last so it can wrap showView / updateUserIndicator without touching them. */
 (function () {
-  var VIEW_TO_NAV = {
-    home: 'home', register: 'register', apply: 'register',
-    login: 'login', lookup: 'login', reset: 'login',
-    'staff-apply': 'staff-apply', 'volunteer-apply': 'volunteer-apply',
-    'coverage-role': 'coverage-role', 'coverage-lookup': 'coverage-role', coverage: 'coverage-role',
-    dashboard: 'dashboard'
-  };
   var currentView = 'home';
+  var SECTION_TITLES = ['Admissions Pipeline', 'Coverage Schedule', 'Email Accounts', 'Recent Activity', 'Upcoming Interviews'];
+
+  /* Find the dashboard card for a section by its heading (email card is found by id). */
+  function sectionEl(key) {
+    if (key === 'overview') return document.getElementById('view-dashboard');
+    if (key === 'Email Accounts') return document.getElementById('email-accounts-card');
+    var hs = document.querySelectorAll('#view-dashboard h3');
+    for (var i = 0; i < hs.length; i++) {
+      if (hs[i].textContent.trim() === key) return hs[i].closest('.neu-raised');
+    }
+    return null;
+  }
+
+  window.adminJump = function (key) {
+    if (currentView !== 'dashboard') window.showView('dashboard');
+    var el = sectionEl(key);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: key === 'overview' ? 'start' : 'start' });
+    setActive(key);
+    closeMenu();
+  };
+
+  function setActive(key) {
+    if (!sidebar) return;
+    sidebar.querySelectorAll('.nav-item[data-nav]').forEach(function (el) {
+      el.classList.toggle('is-active', el.getAttribute('data-nav') === key);
+    });
+  }
 
   function closeMenu() {
     document.body.classList.remove('menu-open');
@@ -33,20 +53,14 @@
         sidebar.remove();
       }
     }
-    var dash = document.getElementById('nav-dashboard');
-    var login = document.getElementById('nav-admin-login');
     document.body.classList.toggle('has-sidebar', !!isAdmin);
     if (!isAdmin) closeMenu();
     /* one #user-indicator: sidebar for admins, top bar for parents/students */
     var ind = document.getElementById('user-indicator');
     var slot = isAdmin ? sidebar.querySelector('.sidebar-foot') : document.getElementById('public-user-slot');
     if (ind && slot && ind.parentNode !== slot) slot.appendChild(ind);
-    if (dash) dash.hidden = !isAdmin;
-    if (login) login.hidden = isAdmin;
-    var key = VIEW_TO_NAV[currentView];
-    (sidebar ? sidebar.querySelectorAll('.nav-item[data-nav]') : []).forEach(function (el) {
-      el.classList.toggle('is-active', el.getAttribute('data-nav') === key);
-    });
+    if (isAdmin && currentView === 'dashboard' && !sidebar.querySelector('.is-active')) setActive('overview');
+    if (currentView !== 'dashboard') setActive(null);
   }
 
   if (typeof window.showView === 'function') {
@@ -80,6 +94,18 @@
   document.body.appendChild(backdrop);
 
   syncNav();
+
+  /* scroll-spy: highlight the dashboard section nearest the top */
+  window.addEventListener('scroll', function () {
+    if (currentView !== 'dashboard' || !sidebar || !sidebar.isConnected) return;
+    var best = 'overview', bestTop = -Infinity;
+    SECTION_TITLES.forEach(function (k) {
+      var el = sectionEl(k); if (!el) return;
+      var t = el.getBoundingClientRect().top;
+      if (t <= 140 && t > bestTop) { best = k; bestTop = t; }
+    });
+    setActive(best);
+  }, { passive: true });
 
   /* ---- cursor trail: glowing particles that follow the pointer ---- */
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
