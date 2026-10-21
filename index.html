@@ -900,30 +900,30 @@ tailwind.config = {
 <!-- VIEW: ADMIN DASHBOARD -->
 <main id="view-dashboard" class="max-w-7xl mx-auto px-6 py-10 hidden">
   <div class="neu-raised rounded-2xl p-4 mb-6 flex items-center justify-between flex-wrap gap-2" id="base-banner">
-    <div><p class="text-[10px] text-gray-500 uppercase tracking-widest">Airtable database in use</p>
+    <div><p class="text-sm text-gray-500 uppercase tracking-widest">Airtable database in use</p>
     <p class="font-display text-base font-bold neon-text" id="base-name">Checking…</p></div>
-    <p class="text-[11px] text-gray-500" id="base-note"></p>
+    <p class="text-sm text-gray-500" id="base-note"></p>
   </div>
   <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8" id="stat-cards">
-    <div class="neu-raised rounded-2xl p-5 text-center"><p class="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Total Students</p><p class="font-display text-2xl font-bold neon-text" id="stat-total">--</p><p class="text-[10px] text-green-500 mt-1" id="stat-total-sub">Loading...</p></div>
-    <div class="neu-raised rounded-2xl p-5 text-center"><p class="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Active</p><p class="font-display text-2xl font-bold text-white" id="stat-active">--</p><p class="text-[10px] text-green-500 mt-1" id="stat-active-sub">Loading...</p></div>
-    <div class="neu-raised rounded-2xl p-5 text-center"><p class="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Onboarding</p><p class="font-display text-2xl font-bold text-white" id="stat-onboarding">--</p><p class="text-[10px] text-neon-dim mt-1" id="stat-onboarding-sub">Loading...</p></div>
-    <div class="neu-raised rounded-2xl p-5 text-center"><p class="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Withdrawn</p><p class="font-display text-2xl font-bold text-white" id="stat-withdrawn">--</p><p class="text-[10px] text-yellow-500 mt-1" id="stat-withdrawn-sub">Loading...</p></div>
+    <div class="neu-raised rounded-2xl p-5 text-center"><p class="text-sm text-gray-500 uppercase tracking-widest mb-1">Total Students</p><p class="font-display text-2xl font-bold neon-text" id="stat-total">--</p><p class="text-sm text-green-500 mt-1" id="stat-total-sub">Loading...</p></div>
+    <div class="neu-raised rounded-2xl p-5 text-center"><p class="text-sm text-gray-500 uppercase tracking-widest mb-1">Active</p><p class="font-display text-2xl font-bold text-white" id="stat-active">--</p><p class="text-sm text-green-500 mt-1" id="stat-active-sub">Loading...</p></div>
+    <div class="neu-raised rounded-2xl p-5 text-center"><p class="text-sm text-gray-500 uppercase tracking-widest mb-1">Onboarding</p><p class="font-display text-2xl font-bold text-white" id="stat-onboarding">--</p><p class="text-sm text-neon-dim mt-1" id="stat-onboarding-sub">Loading...</p></div>
+    <div class="neu-raised rounded-2xl p-5 text-center"><p class="text-sm text-gray-500 uppercase tracking-widest mb-1">Withdrawn</p><p class="font-display text-2xl font-bold text-white" id="stat-withdrawn">--</p><p class="text-sm text-yellow-500 mt-1" id="stat-withdrawn-sub">Loading...</p></div>
   </div>
   <div class="neu-raised rounded-2xl p-6 mb-6">
     <div class="flex items-center justify-between mb-5"><h3 class="font-display text-base font-bold neon-text">Admissions Pipeline</h3>
       <div class="flex items-center gap-3">
-        <select class="neu-input text-xs px-3 py-1.5 rounded-lg" id="class-filter"><option value="">All Classes</option><option>Falcons</option><option>Hawks</option><option>Sparrows</option><option>Eagles</option></select>
-        <button onclick="refreshAirtableData()" class="neu-btn px-3 py-1.5 rounded-lg text-[11px] neon-text-subtle" id="refresh-btn" title="Refresh from Airtable">↻ Refresh</button>
+        <select class="neu-input text-base px-3 py-1.5 rounded-lg" id="class-filter"><option value="">All Classes</option><option>Falcons</option><option>Hawks</option><option>Sparrows</option><option>Eagles</option></select>
+        <button onclick="refreshAirtableData()" class="neu-btn px-3 py-1.5 rounded-lg text-sm neon-text-subtle" id="refresh-btn" title="Refresh from Airtable">↻ Refresh</button>
       </div></div>
     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4" id="pipeline-board"></div>
   </div>
   <div class="neu-raised rounded-2xl p-6 mb-6">
     <div class="flex items-center justify-between mb-2">
       <h3 class="font-display text-base font-bold neon-text">Coverage Schedule</h3>
-      <button onclick="loadAdminCoverageSchedule()" class="neu-btn px-3 py-1.5 rounded-lg text-[11px] neon-text-subtle" title="Refresh">↻ Refresh</button>
+      <button onclick="loadAdminCoverageSchedule()" class="neu-btn px-3 py-1.5 rounded-lg text-sm neon-text-subtle" title="Refresh">↻ Refresh</button>
     </div>
-    <p class="text-xs text-gray-500 mb-4">Add, remove, or reassign who's covering each Saturday slot. The 3-instructor cap on class slots is a self-service guardrail — you can override it here.</p>
+    <p class="text-base text-gray-500 mb-4">Add, remove, or reassign who's covering each Saturday slot. The 3-instructor cap on class slots is a self-service guardrail — you can override it here.</p>
     <div id="admin-coverage-schedule"><p class="text-sm text-gray-500 text-center py-8">Loading...</p></div>
   </div>
   <div class="neu-raised rounded-2xl p-6 mb-6" id="email-accounts-card"><p class="text-sm text-gray-500 text-center py-8">Loading...</p></div>
@@ -933,7 +933,7 @@ tailwind.config = {
   </div>
   <div class="neu-raised rounded-2xl p-6 mt-6">
     <h3 class="font-display text-base font-bold neon-text mb-5">Upcoming Interviews</h3>
-    <div class="overflow-x-auto"><table class="w-full text-sm"><thead><tr class="text-[10px] text-gray-500 uppercase tracking-widest border-b border-gray-800"><th class="text-left py-3 px-2 font-medium">Applicant</th><th class="text-left py-3 px-2 font-medium">Program</th><th class="text-left py-3 px-2 font-medium">Date</th><th class="text-left py-3 px-2 font-medium">Interviewer</th><th class="text-left py-3 px-2 font-medium">Status</th><th class="text-right py-3 px-2 font-medium">Actions</th></tr></thead><tbody id="interview-table"></tbody></table></div>
+    <div class="overflow-x-auto"><table class="w-full text-sm"><thead><tr class="text-sm text-gray-500 uppercase tracking-widest border-b border-gray-800"><th class="text-left py-3 px-2 font-medium">Applicant</th><th class="text-left py-3 px-2 font-medium">Program</th><th class="text-left py-3 px-2 font-medium">Date</th><th class="text-left py-3 px-2 font-medium">Interviewer</th><th class="text-left py-3 px-2 font-medium">Status</th><th class="text-right py-3 px-2 font-medium">Actions</th></tr></thead><tbody id="interview-table"></tbody></table></div>
   </div>
   <!-- Airtable Connection Banner -->
   <div class="neu-raised rounded-2xl p-5 mt-6" id="airtable-banner">
@@ -941,7 +941,7 @@ tailwind.config = {
       <span class="w-2.5 h-2.5 rounded-full" id="at-status-dot" style="background:#eab308;box-shadow:0 0 6px rgba(234,179,8,0.4)"></span>
       <div>
         <p class="text-sm font-medium text-white" id="at-status-text">Airtable — Verifying...</p>
-        <p class="text-[10px] text-gray-500" id="at-status-sub">Connecting via secure server-side proxy</p>
+        <p class="text-sm text-gray-500" id="at-status-sub">Connecting via secure server-side proxy</p>
       </div>
     </div>
   </div>
@@ -2560,7 +2560,7 @@ function renderPipeline(){
     const c=document.createElement('div');
     c.className='min-w-0 neu-raised rounded-xl p-4';
     const stageColor=stage==='Complete'?'text-green-500':stage==='Rejected - Poor Interview'?'text-red-400':stage==='Registration Fees'?'text-yellow-400':'text-gray-400';
-    c.innerHTML='<div class="flex items-center gap-2 mb-3"><h4 class="text-[11px] font-semibold '+stageColor+' uppercase tracking-wider truncate">'+label+'</h4><span class="text-[10px] neon-text-subtle font-display shrink-0">'+students.length+'</span></div><div class="space-y-2" style="max-height:320px;overflow-y:auto">'+students.slice(0,20).map(s=>'<div class="neu-inset rounded-xl p-3 cursor-pointer hover:border-neon/20" title="ID: '+s.id+'"><p class="text-sm font-medium text-white truncate">'+s.name+'</p><p class="text-[10px] text-gray-500 mt-0.5 truncate">'+s.program+'</p>'+(s.id?'<p class="text-[10px] text-gray-600 mt-1">'+s.id+'</p>':'')+'</div>').join('')+(students.length>20?'<p class="text-[10px] text-gray-500 text-center py-2">+'+(students.length-20)+' more</p>':'')+'</div>';
+    c.innerHTML='<div class="flex items-center gap-2 mb-3"><h4 class="text-sm font-semibold '+stageColor+' uppercase tracking-wider truncate">'+label+'</h4><span class="text-sm neon-text-subtle font-display shrink-0">'+students.length+'</span></div><div class="space-y-2" style="max-height:320px;overflow-y:auto">'+students.slice(0,20).map(s=>'<div class="neu-inset rounded-xl p-3 cursor-pointer hover:border-neon/20" title="ID: '+s.id+'"><p class="text-sm font-medium text-white truncate">'+s.name+'</p><p class="text-sm text-gray-500 mt-0.5 truncate">'+s.program+'</p>'+(s.id?'<p class="text-sm text-gray-600 mt-1">'+s.id+'</p>':'')+'</div>').join('')+(students.length>20?'<p class="text-sm text-gray-500 text-center py-2">+'+(students.length-20)+' more</p>':'')+'</div>';
     b.appendChild(c);
   });
 }
@@ -2596,7 +2596,7 @@ function renderActivity(){
     );
   }
   f.innerHTML='';
-  activities.forEach(i=>{const d=document.createElement('div');d.className='flex items-start gap-3';d.innerHTML='<div class="w-2 h-2 mt-1.5 rounded-full shrink-0" style="background:'+i.color+';box-shadow:0 0 6px '+i.color+'66;"></div><div class="flex-1"><p class="text-sm leading-snug">'+i.text+'</p>'+(i.time?'<p class="text-[10px] text-gray-600 mt-0.5">'+i.time+'</p>':'')+'</div>';f.appendChild(d);});
+  activities.forEach(i=>{const d=document.createElement('div');d.className='flex items-start gap-3';d.innerHTML='<div class="w-2 h-2 mt-1.5 rounded-full shrink-0" style="background:'+i.color+';box-shadow:0 0 6px '+i.color+'66;"></div><div class="flex-1"><p class="text-sm leading-snug">'+i.text+'</p>'+(i.time?'<p class="text-sm text-gray-600 mt-0.5">'+i.time+'</p>':'')+'</div>';f.appendChild(d);});
 }
 
 /* ===== Interviews Table ===== */
