@@ -138,3 +138,23 @@ test('every password box (register, login, reset) gets the Caps Lock warning', a
   expect(total).toBeGreaterThanOrEqual(5);
   expect(n).toBe(total);
 });
+
+test('sample CSV template downloads, and its example rows are skipped on upload', async ({ page }) => {
+  const calls = await stub(page);
+  await signIn(page);
+  await page.locator('#email-accounts-card button', { hasText: 'Upload spreadsheet' }).click();
+  const [dl] = await Promise.all([page.waitForEvent('download'), page.locator('#email-accounts-card button', { hasText: 'Download sample CSV template' }).click()]);
+  expect(dl.suggestedFilename()).toBe('ace-email-accounts-template.csv');
+  const text = (await require('fs').promises.readFile(await dl.path(), 'utf8'));
+  expect(text.charCodeAt(0)).toBe(0xFEFF); // BOM so Excel reads it as UTF-8
+  expect(text).toContain('first,last,personalEmail,mobile,type,role');
+  // uploading the untouched template leaves nothing to review
+  await page.fill('#email-accounts-card textarea', text);
+  await page.locator('#email-accounts-card button', { hasText: 'Review addresses' }).click();
+  await expect(page.locator('#email-accounts-card')).not.toContainText('ready.');
+  expect(calls.some(c => c.body && c.body.action === 'preview')).toBe(false);
+  // a real row mixed in with the examples still goes through
+  await page.fill('#email-accounts-card textarea', text + 'Real,Person,real@gmail.com,404-555-0100,staff,\r\n');
+  await page.locator('#email-accounts-card button', { hasText: 'Review addresses' }).click();
+  await expect(page.locator('#email-accounts-card')).toContainText('1 of 1 ready');
+});

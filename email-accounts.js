@@ -148,23 +148,42 @@
     return box;
   }
 
-  const TEMPLATE = 'first,last,personalEmail,mobile,type,role\nJane,Doe,jane@gmail.com,404-555-0123,staff,\nSam,Lee,sam@yahoo.com,404-555-0199,board,boardtreasurer\n';
+  /* Sample file: every example uses @example.com so it can never become a real account (those rows are skipped on upload). */
+  const TEMPLATE = [
+    'first,last,personalEmail,mobile,type,role',
+    'Jane,Doe,jane.doe@example.com,404-555-0123,staff,',
+    'Sam,Lee,sam.lee@example.com,404-555-0199,board,boardtreasurer',
+    'Maria,Garcia-Lopez,maria.garcia@example.com,(678) 555-0142,board,',
+    ''
+  ].join('\r\n');
+  function downloadTemplate() {
+    const blob = new Blob(['\uFEFF' + TEMPLATE], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = h('a', { href: url, download: 'ace-email-accounts-template.csv' });
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
   function renderUpload() {
     const ta = h('textarea', { class: 'neu-input px-3 py-2 rounded-lg text-xs w-full font-mono', rows: 6, placeholder: 'Paste rows here, or choose a .csv file below' });
     const file = h('input', { type: 'file', accept: '.csv,text/csv', class: 'neu-input text-xs' });
     file.addEventListener('change', () => { const r = new FileReader(); r.onload = () => { ta.value = String(r.result); }; file.files[0] && r.readAsText(file.files[0]); });
-    const tpl = h('a', { class: 'text-xs underline neon-text-subtle', href: 'data:text/csv;charset=utf-8,' + encodeURIComponent(TEMPLATE), download: 'ace-email-accounts-template.csv' }, 'Download the template');
+    const tpl = h('div', {}, btn('⬇ Download sample CSV template', downloadTemplate, 'neon-text'),
+      h('p', { class: 'text-[11px] text-gray-500 mt-1' }, 'Opens in Excel, Numbers or Google Sheets. The three example rows use @example.com and are skipped automatically, so you can leave them or delete them.'));
     const box = h('div', { class: 'space-y-3' },
       h('p', { class: 'text-xs text-gray-400' }, 'Columns: first, last, personalEmail, mobile, type (staff or board), role (optional: boardchair, boardvicechair, boardtreasurer, boardsecretary). Up to 100 rows.'),
       tpl, file, ta,
       btn('Review addresses →', () => {
-        draft = parseCsv(ta.value);
+        const all = parseCsv(ta.value);
+        draft = all.filter(r => !/@example\.com$/i.test(r.personalEmail.trim()));
+        if (all.length > draft.length) toast((all.length - draft.length) + ' example row(s) skipped', 'success');
         draft.length ? runPreview() : toast('No rows found', 'error');
       }, 'neon-text'));
     if (previewRows) box.append(renderPreview());
     return box;
   }
   function parseCsv(text) {
+    text = String(text).replace(/^\uFEFF/, '');
     const rows = []; let row = [], cur = '', q = false;
     for (let i = 0; i < text.length; i++) {
       const c = text[i];
