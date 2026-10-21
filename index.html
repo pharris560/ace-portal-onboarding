@@ -160,6 +160,7 @@ tailwind.config = {
       <button type="button" class="nav-item" data-nav="Email Accounts" onclick="adminJump('Email Accounts')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18v14H3z"/><path d="m3 6 9 7 9-7"/></svg><span>Email Accounts</span></button>
       <button type="button" class="nav-item" data-nav="Recent Activity" onclick="adminJump('Recent Activity')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg><span>Recent Activity</span></button>
       <button type="button" class="nav-item" data-nav="Upcoming Interviews" onclick="adminJump('Upcoming Interviews')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>Upcoming Interviews</span></button>
+      <a class="nav-item" id="staff-portal-link" href="https://staff-portal.flyace.org" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6"/><path d="M20 4 10 14"/><path d="M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/></svg>Staff Portal ↗</a>
   </nav>
   <div class="sidebar-foot">
     <div id="user-indicator" class="hidden" style="display:none;">
@@ -909,6 +910,12 @@ tailwind.config = {
 
 <!-- VIEW: ADMIN DASHBOARD -->
 <main id="view-dashboard" class="max-w-7xl mx-auto px-6 py-10 hidden">
+  <a href="https://staff-portal.flyace.org" target="_blank" rel="noopener" id="staff-portal-card" class="neu-raised rounded-2xl p-5 mb-6 flex items-center justify-between flex-wrap gap-3" style="text-decoration:none;display:flex">
+    <div><p class="text-sm text-gray-500 uppercase tracking-widest">ACE Staff Portal</p>
+    <p class="font-display text-base font-bold neon-text">Documents, group texts, inbox and more</p>
+    <p class="text-base text-gray-500">Opens the Staff Portal in a new tab. Sign in there with your Staff Portal account.</p></div>
+    <span class="neu-btn px-4 py-2 rounded-lg text-sm neon-text-subtle">Open Staff Portal ↗</span>
+  </a>
   <div class="neu-raised rounded-2xl p-4 mb-6 flex items-center justify-between flex-wrap gap-2" id="base-banner">
     <div><p class="text-sm text-gray-500 uppercase tracking-widest">Airtable database in use</p>
     <p class="font-display text-base font-bold neon-text" id="base-name">Checking…</p></div>

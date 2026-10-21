@@ -84,3 +84,23 @@ test('signing out clears the server cookie', async ({ page }) => {
   await page.evaluate(() => signOut());
   await expect.poll(() => calls.logout).toBe(1);
 });
+
+test('administrator dashboard has a card and a sidebar link that open the Staff Portal in a new tab', async ({ page }) => {
+  await stub(page, j(ADMIN));
+  await signIn(page, 'pam@example.com');
+  await expect(page.locator('#view-dashboard')).toBeVisible();
+  for (const sel of ['#staff-portal-card', '#staff-portal-link']) {
+    const a = page.locator(sel);
+    await expect(a).toHaveAttribute('href', 'https://staff-portal.flyace.org');
+    await expect(a).toHaveAttribute('target', '_blank');
+    await expect(a).toHaveAttribute('rel', /noopener/);
+  }
+});
+
+test('parents and students never get the Staff Portal link (no sidebar, dashboard not shown)', async ({ page }) => {
+  await stub(page, j(PARENT));
+  await signIn(page, 'parent@example.com');
+  await expect.poll(() => page.evaluate(() => loggedInUser && loggedInUser.role)).toBe('parent');
+  expect(await page.locator('#staff-portal-link').count()).toBe(0); // sidebar is removed from the page
+  await expect(page.locator('#staff-portal-card')).toBeHidden();
+});
