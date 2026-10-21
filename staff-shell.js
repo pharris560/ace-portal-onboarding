@@ -15,8 +15,36 @@
     return null;
   }
 
+  /* ---- collapsible dashboard cards ---- */
+  var COLLAPSIBLE = ['Admissions Pipeline', 'Coverage Schedule'];
+  function loadCollapsed() { try { return JSON.parse(localStorage.getItem('ace-collapsed') || '{}') || {}; } catch (e) { return {}; } }
+  function saveCollapsed(m) { try { localStorage.setItem('ace-collapsed', JSON.stringify(m)); } catch (e) { /* private mode: not remembered */ } }
+  function setCollapsed(card, title, collapsed) {
+    card.classList.toggle('is-collapsed', collapsed);
+    var btn = card.querySelector('.collapse-btn');
+    if (btn) btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+    var m = loadCollapsed(); m[title] = collapsed; saveCollapsed(m);
+  }
+  function initCollapsibles() {
+    var saved = loadCollapsed();
+    COLLAPSIBLE.forEach(function (title) {
+      var card = sectionEl(title);
+      if (!card || card.querySelector('.collapse-btn')) return;
+      var h3 = Array.prototype.filter.call(card.querySelectorAll('h3'), function (h) { return h.textContent.trim() === title; })[0];
+      h3.innerHTML = '<button type="button" class="collapse-btn" aria-expanded="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg><span></span></button>';
+      h3.querySelector('span').textContent = title;
+      h3.querySelector('button').addEventListener('click', function () { setCollapsed(card, title, !card.classList.contains('is-collapsed')); });
+      if (saved[title]) setCollapsed(card, title, true);
+    });
+  }
+  function expandSection(key) {
+    var card = sectionEl(key);
+    if (card && card.classList.contains('is-collapsed')) setCollapsed(card, key, false);
+  }
+
   window.adminJump = function (key) {
     if (currentView !== 'dashboard') window.showView('dashboard');
+    expandSection(key);
     var el = sectionEl(key);
     if (el) el.scrollIntoView({ behavior: 'smooth', block: key === 'overview' ? 'start' : 'start' });
     setActive(key);
@@ -93,6 +121,7 @@
   backdrop.addEventListener('click', closeMenu);
   document.body.appendChild(backdrop);
 
+  initCollapsibles();
   syncNav();
 
   /* scroll-spy: highlight the dashboard section nearest the top */

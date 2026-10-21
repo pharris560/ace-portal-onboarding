@@ -267,3 +267,17 @@ body.has-sidebar .public-header { display: none; }
 .public-user .nav-item.signout { width: auto; color: var(--navy-700); background: var(--neo-bg); box-shadow: var(--neo-raised-sm); padding: 8px 14px; }
 .public-user .nav-item.signout:hover { color: var(--navy-800); background: var(--neo-bg); box-shadow: var(--neo-raised); transform: translateY(-1px); }
 @media (max-width: 860px) { body:not(.has-sidebar) .app-main { padding-top: 16px; } .public-header img { height: 44px; } }
+
+/* ---- collapsible cards ---- */
+.collapse-btn { display: inline-flex; align-items: center; gap: 10px; font: inherit; color: inherit; background: none; border: 0; padding: 4px 6px; margin-left: -6px; border-radius: var(--r-md); cursor: pointer; transition: background-color .16s var(--ease); }
+.collapse-btn:hover { background: rgba(255, 255, 255, .4); }
+.collapse-btn svg { width: 18px; height: 18px; flex: none; transition: transform .25s var(--ease-spring); }
+.collapse-btn[aria-expanded="false"] svg { transform: rotate(-90deg); }
+.is-collapsed > :not(:first-child) { display: none !important; }
+.is-collapsed > :first-child { margin-bottom: 0 !important; }
+/* student search results */
+.student-head { background: none; border: 0; color: inherit; font: inherit; cursor: pointer; border-radius: var(--r-xl); transition: background-color .16s var(--ease); }
+.student-head:hover { background: rgba(255, 255, 255, .35); }
+.student-head .chev { display: inline-block; color: var(--navy-700); transition: transform .25s var(--ease-spring); }
+.student-detail { border-top: 1px solid var(--neo-divider); padding-top: 14px; }
+.student-detail[hidden] { display: none; }
