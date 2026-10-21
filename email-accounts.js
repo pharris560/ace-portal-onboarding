@@ -21,8 +21,8 @@
     kids.flat(Infinity).forEach(c => { if (c != null && c !== false) e.append(c.nodeType ? c : document.createTextNode(String(c))); });
     return e;
   }
-  const btn = (label, fn, cls) => h('button', { class: 'neu-btn px-3 py-1.5 rounded-lg text-[11px] ' + (cls || 'neon-text-subtle'), onclick: fn, type: 'button' }, label);
-  const input = (ph, val, cls) => { const i = h('input', { class: 'neu-input px-3 py-2 rounded-lg text-xs ' + (cls || ''), placeholder: ph, type: 'text' }); i.value = val || ''; return i; };
+  const btn = (label, fn, cls) => h('button', { class: 'neu-btn px-3 py-1.5 rounded-lg text-sm ' + (cls || 'neon-text-subtle'), onclick: fn, type: 'button' }, label);
+  const input = (ph, val, cls) => { const i = h('input', { class: 'neu-input px-3 py-2 rounded-lg text-base ' + (cls || ''), placeholder: ph, type: 'text' }); i.value = val || ''; return i; };
   const toast = (m, t) => (typeof showToast === 'function' ? showToast(m, t || 'success') : console.log(m));
 
   async function call(body) {
@@ -45,15 +45,15 @@
   function render() {
     const root = $('email-accounts-card'); if (!root) return;
     const tabs = [['accounts', 'Accounts'], ['add', 'Add people'], ['upload', 'Upload spreadsheet']].map(([k, l]) =>
-      h('button', { type: 'button', onclick: () => { tab = k; previewRows = null; render(); }, class: 'px-3 py-1.5 rounded-lg text-xs ' + (tab === k ? 'neu-btn neon-text' : 'text-gray-400') }, l));
+      h('button', { type: 'button', onclick: () => { tab = k; previewRows = null; render(); }, class: 'px-3 py-1.5 rounded-lg text-base ' + (tab === k ? 'neu-btn neon-text' : 'text-gray-400') }, l));
     root.replaceChildren(
       h('div', { class: 'flex items-center justify-between mb-2 flex-wrap gap-2' },
         h('h3', { class: 'font-display text-base font-bold neon-text' }, 'Email Accounts (@flyace.org)'),
         h('div', { class: 'flex items-center gap-3' },
-          h('span', { class: 'text-[11px] text-gray-400' }, `${state.licensesUsed} of ${state.licenseLimit} free licenses in use`),
-          h('a', { class: 'text-[11px] underline neon-text-subtle', href: 'email-setup.html', target: '_blank', rel: 'noopener' }, 'Setup guide for new users'),
+          h('span', { class: 'text-sm text-gray-400' }, `${state.licensesUsed} of ${state.licenseLimit} free licenses in use`),
+          h('a', { class: 'text-sm underline neon-text-subtle', href: 'email-setup.html', target: '_blank', rel: 'noopener' }, 'Setup guide for new users'),
           btn('↻ Refresh', load))),
-      h('p', { class: 'text-xs text-gray-500 mb-4' }, 'Requests are saved here and carried out in Microsoft by the email workflow. "Waiting" means it has not been processed yet. Temporary passwords are texted to the person; they are never shown or stored here.'),
+      h('p', { class: 'text-base text-gray-500 mb-4' }, 'Requests are saved here and carried out in Microsoft by the email workflow. "Waiting" means it has not been processed yet. Temporary passwords are texted to the person; they are never shown or stored here.'),
       h('div', { class: 'flex gap-2 mb-4' }, tabs),
       tab === 'accounts' ? renderAccounts() : tab === 'add' ? renderAdd() : renderUpload());
   }
@@ -61,17 +61,17 @@
   const badge = (a) => {
     const txt = a.pending ? (a.status === 'Waiting for move' ? 'Waiting: ' : 'Queued: ') + a.pending : a.status || '—';
     const col = a.status === 'Error' ? '#ef4444' : a.pending ? '#eab308' : a.status === 'Active' ? '#22c55e' : '#9ca3af';
-    return h('span', { class: 'text-[10px] px-2 py-0.5 rounded-full', style: `border:1px solid ${col};color:${col}` }, txt);
+    return h('span', { class: 'text-sm px-2 py-0.5 rounded-full', style: `border:1px solid ${col};color:${col}` }, txt);
   };
 
   function renderAccounts() {
     if (!state.accounts.length) return h('p', { class: 'text-sm text-gray-500 text-center py-8' }, 'No accounts requested yet. Use "Add people" or "Upload spreadsheet".');
     const rows = state.accounts.map(a => [
       h('tr', { class: 'border-b border-gray-800' },
-        h('td', { class: 'py-2 px-2' }, h('div', { class: 'text-white text-xs' }, a.address), h('div', { class: 'text-[10px] text-gray-500' }, a.displayName)),
-        h('td', { class: 'py-2 px-2 text-xs text-gray-400' }, a.kind === 'Role' ? 'Role' : a.holderType || 'Personal'),
-        h('td', { class: 'py-2 px-2' }, badge(a), a.lastError ? h('div', { class: 'text-[10px] text-red-400 mt-1' }, a.lastError) : null),
-        h('td', { class: 'py-2 px-2 text-[11px] text-gray-400' }, a.forwarding ? 'Forwards to ' + a.forwardTo : '—'),
+        h('td', { class: 'py-2 px-2' }, h('div', { class: 'text-white text-base' }, a.address), h('div', { class: 'text-sm text-gray-500' }, a.displayName)),
+        h('td', { class: 'py-2 px-2 text-base text-gray-400' }, a.kind === 'Role' ? 'Role' : a.holderType || 'Personal'),
+        h('td', { class: 'py-2 px-2' }, badge(a), a.lastError ? h('div', { class: 'text-sm text-red-400 mt-1' }, a.lastError) : null),
+        h('td', { class: 'py-2 px-2 text-sm text-gray-400' }, a.forwarding ? 'Forwards to ' + a.forwardTo : '—'),
         h('td', { class: 'py-2 px-2' }, h('div', { class: 'flex flex-wrap gap-1.5' },
           btn('Forwarding', () => toggle(a.id, 'fwd')),
           a.kind === 'Role' ? btn('Hand over', () => toggle(a.id, 'hand')) : btn('Offboard', () => toggle(a.id, 'off')),
@@ -80,7 +80,7 @@
           a.status === 'Disabled' ? btn('Re-enable', () => simple(a, 'reenable')) : btn('Disable', () => simple(a, 'disable', 'Block sign-in for ' + a.address + '? Mail is kept.'))))),
       openPanel && openPanel.id === a.id ? h('tr', {}, h('td', { colspan: 5, class: 'p-3' }, panel(a))) : null]);
     return h('div', { class: 'overflow-x-auto' }, h('table', { class: 'w-full text-sm' },
-      h('thead', {}, h('tr', { class: 'text-[10px] text-gray-500 uppercase tracking-widest border-b border-gray-800' },
+      h('thead', {}, h('tr', { class: 'text-sm text-gray-500 uppercase tracking-widest border-b border-gray-800' },
         ['Address', 'Type', 'Status', 'Forwarding', 'Actions'].map(t => h('th', { class: 'text-left py-2 px-2 font-medium' }, t)))),
       h('tbody', {}, rows)));
   }
@@ -99,22 +99,22 @@
       const on = h('input', { type: 'checkbox' }); on.checked = a.forwarding;
       const to = input('Forward to (any email address)', a.forwardTo, 'w-full');
       const keep = h('input', { type: 'checkbox' }); keep.checked = true;
-      wrap.append(h('label', { class: 'flex items-center gap-2 text-xs text-gray-300' }, on, 'Forward new mail'), to,
-        h('label', { class: 'flex items-center gap-2 text-xs text-gray-300' }, keep, 'Also keep a copy in this mailbox'),
+      wrap.append(h('label', { class: 'flex items-center gap-2 text-base text-gray-300' }, on, 'Forward new mail'), to,
+        h('label', { class: 'flex items-center gap-2 text-base text-gray-300' }, keep, 'Also keep a copy in this mailbox'),
         btn('Save forwarding', () => done({ action: 'forwarding', id: a.id, enabled: on.checked, forwardTo: to.value, keepCopy: keep.checked })));
     } else if (openPanel.kind === 'off') {
-      const sel = h('select', { class: 'neu-input px-3 py-2 rounded-lg text-xs w-full' }, h('option', { value: '' }, 'Choose a teammate to receive this mail…'),
+      const sel = h('select', { class: 'neu-input px-3 py-2 rounded-lg text-base w-full' }, h('option', { value: '' }, 'Choose a teammate to receive this mail…'),
         state.accounts.filter(x => x.id !== a.id && x.address && x.status !== 'Disabled').map(x => h('option', { value: x.address }, `${x.displayName || x.address} (${x.address})`)));
-      const reply = h('textarea', { class: 'neu-input px-3 py-2 rounded-lg text-xs w-full', rows: 3, placeholder: 'Optional auto-reply, e.g. "Jane has left ACE. Please contact Tom at tom@flyace.org."' });
-      wrap.append(h('p', { class: 'text-xs text-gray-400' }, `Blocks sign-in for ${a.address}, forwards new mail to the teammate, and gives them access to the old mailbox and its history.`), sel, reply,
+      const reply = h('textarea', { class: 'neu-input px-3 py-2 rounded-lg text-base w-full', rows: 3, placeholder: 'Optional auto-reply, e.g. "Jane has left ACE. Please contact Tom at tom@flyace.org."' });
+      wrap.append(h('p', { class: 'text-base text-gray-400' }, `Blocks sign-in for ${a.address}, forwards new mail to the teammate, and gives them access to the old mailbox and its history.`), sel, reply,
         btn('Offboard', () => sel.value ? done({ action: 'offboard', id: a.id, forwardTo: sel.value, autoReply: reply.value }) : toast('Choose a teammate first', 'error')));
     } else if (openPanel.kind === 'hand') {
       const f = input('First name'), l = input('Last name'), e = input('Personal email'), m = input('Mobile (for the temporary password)');
-      const pick = h('select', { class: 'neu-input px-3 py-2 rounded-lg text-xs w-full' }, h('option', { value: '' }, 'Or pick a board member from Airtable…'),
+      const pick = h('select', { class: 'neu-input px-3 py-2 rounded-lg text-base w-full' }, h('option', { value: '' }, 'Or pick a board member from Airtable…'),
         state.candidates.board.map((p, i) => h('option', { value: i }, `${p.first} ${p.last}`)));
       let holderId = '';
       pick.addEventListener('change', () => { const p = state.candidates.board[pick.value]; if (!p) return; f.value = p.first; l.value = p.last; e.value = p.personalEmail; m.value = p.mobile; holderId = p.holderId; });
-      wrap.append(h('p', { class: 'text-xs text-gray-400' }, `Hands ${a.address} (currently ${a.holderName || 'unassigned'}) to a new person. The previous holder is signed out everywhere and locked out; the new holder gets a temporary password by text.`),
+      wrap.append(h('p', { class: 'text-base text-gray-400' }, `Hands ${a.address} (currently ${a.holderName || 'unassigned'}) to a new person. The previous holder is signed out everywhere and locked out; the new holder gets a temporary password by text.`),
         pick, h('div', { class: 'grid grid-cols-2 gap-2' }, f, l, e, m),
         btn('Hand over', () => window.confirm('Lock out the current holder of ' + a.address + '?') && done({ action: 'handover', id: a.id, newHolder: { first: f.value, last: l.value, personalEmail: e.value, mobile: m.value, holderId } })));
     }
@@ -125,19 +125,19 @@
   function renderAdd() {
     const box = h('div', { class: 'space-y-5' });
     const mk = (p, group) => {
-      const roleSel = group === 'board' ? h('select', { class: 'neu-input px-2 py-1 rounded-lg text-[11px]' },
+      const roleSel = group === 'board' ? h('select', { class: 'neu-input px-2 py-1 rounded-lg text-sm' },
         h('option', { value: '' }, 'Personal address'), Object.entries(state.roleKeys).map(([k, v]) => h('option', { value: k, selected: ROLE_BY_BOARD[p.boardRole] === k }, k + '@ (' + v + ')'))) : null;
       const cb = h('input', { type: 'checkbox' });
-      return { cb, p, roleSel, el: h('label', { class: 'flex items-center gap-3 text-xs text-gray-300 py-1' }, cb, `${p.first} ${p.last}`, h('span', { class: 'text-gray-500' }, p.boardRole || ''), roleSel) };
+      return { cb, p, roleSel, el: h('label', { class: 'flex items-center gap-3 text-base text-gray-300 py-1' }, cb, `${p.first} ${p.last}`, h('span', { class: 'text-gray-500' }, p.boardRole || ''), roleSel) };
     };
     const staff = state.candidates.staff.map(p => mk(p, 'staff')), board = state.candidates.board.map(p => mk(p, 'board'));
-    const section = (title, list, empty) => h('div', {}, h('p', { class: 'text-[10px] text-gray-500 uppercase tracking-widest mb-2' }, title),
-      list.length ? list.map(x => x.el) : h('p', { class: 'text-xs text-gray-500' }, empty));
+    const section = (title, list, empty) => h('div', {}, h('p', { class: 'text-sm text-gray-500 uppercase tracking-widest mb-2' }, title),
+      list.length ? list.map(x => x.el) : h('p', { class: 'text-base text-gray-500' }, empty));
     box.append(section('Active Staff without an ACE address', staff, 'Everyone active in Staff already has an address (or the Staff table is empty — use Upload spreadsheet).'),
       section('Active Board Members without an ACE address', board, 'No board members waiting. Add them to the Board Members table in Airtable first.'));
     const f = input('First name'), l = input('Last name'), e = input('Personal email'), m = input('Mobile');
-    const type = h('select', { class: 'neu-input px-3 py-2 rounded-lg text-xs' }, h('option', { value: 'Staff' }, 'Staff'), h('option', { value: 'Board Member' }, 'Board Member'));
-    box.append(h('div', {}, h('p', { class: 'text-[10px] text-gray-500 uppercase tracking-widest mb-2' }, 'Or add one person by hand'), h('div', { class: 'grid grid-cols-2 md:grid-cols-5 gap-2' }, f, l, e, m, type)));
+    const type = h('select', { class: 'neu-input px-3 py-2 rounded-lg text-base' }, h('option', { value: 'Staff' }, 'Staff'), h('option', { value: 'Board Member' }, 'Board Member'));
+    box.append(h('div', {}, h('p', { class: 'text-sm text-gray-500 uppercase tracking-widest mb-2' }, 'Or add one person by hand'), h('div', { class: 'grid grid-cols-2 md:grid-cols-5 gap-2' }, f, l, e, m, type)));
     box.append(btn('Review addresses →', () => {
       draft = [];
       [...staff, ...board].filter(x => x.cb.checked).forEach(x => draft.push({ ...x.p, roleKey: x.roleSel ? x.roleSel.value : '' }));
@@ -165,13 +165,13 @@
   }
 
   function renderUpload() {
-    const ta = h('textarea', { class: 'neu-input px-3 py-2 rounded-lg text-xs w-full font-mono', rows: 6, placeholder: 'Paste rows here, or choose a .csv file below' });
-    const file = h('input', { type: 'file', accept: '.csv,text/csv', class: 'neu-input text-xs' });
+    const ta = h('textarea', { class: 'neu-input px-3 py-2 rounded-lg text-base w-full font-mono', rows: 6, placeholder: 'Paste rows here, or choose a .csv file below' });
+    const file = h('input', { type: 'file', accept: '.csv,text/csv', class: 'neu-input text-base' });
     file.addEventListener('change', () => { const r = new FileReader(); r.onload = () => { ta.value = String(r.result); }; file.files[0] && r.readAsText(file.files[0]); });
     const tpl = h('div', {}, btn('⬇ Download sample CSV template', downloadTemplate, 'neon-text'),
-      h('p', { class: 'text-[11px] text-gray-500 mt-1' }, 'Opens in Excel, Numbers or Google Sheets. The three example rows use @example.com and are skipped automatically, so you can leave them or delete them.'));
+      h('p', { class: 'text-sm text-gray-500 mt-1' }, 'Opens in Excel, Numbers or Google Sheets. The three example rows use @example.com and are skipped automatically, so you can leave them or delete them.'));
     const box = h('div', { class: 'space-y-3' },
-      h('p', { class: 'text-xs text-gray-400' }, 'Columns: first, last, personalEmail, mobile, type (staff or board), role (optional: boardchair, boardvicechair, boardtreasurer, boardsecretary). Up to 100 rows.'),
+      h('p', { class: 'text-base text-gray-400' }, 'Columns: first, last, personalEmail, mobile, type (staff or board), role (optional: boardchair, boardvicechair, boardtreasurer, boardsecretary). Up to 100 rows.'),
       tpl, file, ta,
       btn('Review addresses →', () => {
         const all = parseCsv(ta.value);
@@ -209,13 +209,13 @@
     const body = previewRows.map((r, i) => {
       const a = input('address', r.address.replace(/@flyace\.org$/, ''), 'w-40'); a.disabled = r.kind === 'Role'; addrInputs.push(a);
       return h('tr', { class: 'border-b border-gray-800 align-top' },
-        h('td', { class: 'py-2 px-2 text-xs text-white' }, `${r.first} ${r.last}`, h('div', { class: 'text-[10px] text-gray-500' }, r.kind === 'Role' ? 'Role address' : r.holderType)),
-        h('td', { class: 'py-2 px-2' }, h('div', { class: 'flex items-center gap-1 text-xs text-gray-300' }, a, '@flyace.org')),
-        h('td', { class: 'py-2 px-2 text-[11px]' }, r.problems.map(p => h('div', { class: 'text-red-400' }, '✗ ' + p)), r.notes.map(p => h('div', { class: 'text-yellow-400' }, p)), !r.problems.length && !r.notes.length ? h('span', { class: 'text-green-500' }, '✓ Ready') : null));
+        h('td', { class: 'py-2 px-2 text-base text-white' }, `${r.first} ${r.last}`, h('div', { class: 'text-sm text-gray-500' }, r.kind === 'Role' ? 'Role address' : r.holderType)),
+        h('td', { class: 'py-2 px-2' }, h('div', { class: 'flex items-center gap-1 text-base text-gray-300' }, a, '@flyace.org')),
+        h('td', { class: 'py-2 px-2 text-sm' }, r.problems.map(p => h('div', { class: 'text-red-400' }, '✗ ' + p)), r.notes.map(p => h('div', { class: 'text-yellow-400' }, p)), !r.problems.length && !r.notes.length ? h('span', { class: 'text-green-500' }, '✓ Ready') : null));
     });
     const okCount = previewRows.filter(r => !r.problems.length).length;
     return h('div', { class: 'neu-raised rounded-xl p-4 mt-2' },
-      h('p', { class: 'text-xs text-gray-400 mb-2' }, `${okCount} of ${previewRows.length} ready. Rows with a ✗ will be skipped. You can edit an address before creating.`),
+      h('p', { class: 'text-base text-gray-400 mb-2' }, `${okCount} of ${previewRows.length} ready. Rows with a ✗ will be skipped. You can edit an address before creating.`),
       h('div', { class: 'overflow-x-auto' }, h('table', { class: 'w-full' }, h('tbody', {}, body))),
       h('div', { class: 'flex gap-2 mt-3' },
         btn(`Create ${okCount} account${okCount === 1 ? '' : 's'}`, async () => {
