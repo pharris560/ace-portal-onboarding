@@ -16,14 +16,35 @@
     if (t) t.setAttribute('aria-expanded', 'false');
   }
 
+  /* The sidebar is only in the page while an admin is signed in. */
+  var sidebar = document.getElementById('sidebar');
+  var shell = document.querySelector('.app-shell');
+  var sidebarMark = document.createComment('sidebar (admin only)');
+  if (sidebar && sidebar.parentNode) sidebar.parentNode.insertBefore(sidebarMark, sidebar);
+
   function syncNav() {
     var isAdmin = typeof adminAuthenticated !== 'undefined' && adminAuthenticated;
+    if (sidebar) {
+      if (isAdmin && !sidebar.isConnected) sidebarMark.parentNode.insertBefore(sidebar, sidebarMark.nextSibling);
+      if (!isAdmin && sidebar.isConnected) {
+        var inSidebar = document.querySelector('.sidebar #user-indicator');
+        var pub = document.getElementById('public-user-slot');
+        if (inSidebar && pub) pub.appendChild(inSidebar);
+        sidebar.remove();
+      }
+    }
     var dash = document.getElementById('nav-dashboard');
     var login = document.getElementById('nav-admin-login');
+    document.body.classList.toggle('has-sidebar', !!isAdmin);
+    if (!isAdmin) closeMenu();
+    /* one #user-indicator: sidebar for admins, top bar for parents/students */
+    var ind = document.getElementById('user-indicator');
+    var slot = isAdmin ? sidebar.querySelector('.sidebar-foot') : document.getElementById('public-user-slot');
+    if (ind && slot && ind.parentNode !== slot) slot.appendChild(ind);
     if (dash) dash.hidden = !isAdmin;
     if (login) login.hidden = isAdmin;
     var key = VIEW_TO_NAV[currentView];
-    document.querySelectorAll('.sidebar .nav-item[data-nav]').forEach(function (el) {
+    (sidebar ? sidebar.querySelectorAll('.nav-item[data-nav]') : []).forEach(function (el) {
       el.classList.toggle('is-active', el.getAttribute('data-nav') === key);
     });
   }

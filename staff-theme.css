@@ -251,3 +251,19 @@ a:hover { color: var(--navy-800); }
 /* pipeline: let stage names wrap instead of truncating */
 #pipeline-board h4 { white-space: normal !important; overflow: visible !important; font-size: 12px !important; line-height: 1.25; }
 #pipeline-board { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)) !important; }
+
+/* ---- sidebar is for signed-in admins only; parents/students get a simple top bar ---- */
+body:not(.has-sidebar) .sidebar, body:not(.has-sidebar) .menu-toggle { display: none !important; }
+body:not(.has-sidebar) .app-shell { grid-template-columns: minmax(0, 1fr); }
+body.has-sidebar .public-header { display: none; }
+.public-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; max-width: 1120px; margin: 0 auto 16px; padding: 4px 0; }
+.public-header img { height: 56px; width: auto; border-radius: var(--r-md); background: #fff; padding: 6px 9px; box-shadow: var(--neo-raised-sm); }
+.public-title { font-family: Sora, sans-serif; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--text-2); font-weight: 500; flex: 1; text-align: left; }
+.public-user .user-chip { background: var(--neo-bg); box-shadow: var(--neo-inset-sm); margin: 0; padding: 6px 10px; }
+.public-user .user-chip b { color: var(--text); }
+.public-user .user-chip span { color: var(--text-3); }
+.public-user #user-indicator { display: flex !important; align-items: center; gap: 8px; }
+.public-user #user-indicator.hidden { display: none !important; }
+.public-user .nav-item.signout { width: auto; color: var(--navy-700); background: var(--neo-bg); box-shadow: var(--neo-raised-sm); padding: 8px 14px; }
+.public-user .nav-item.signout:hover { color: var(--navy-800); background: var(--neo-bg); box-shadow: var(--neo-raised); transform: translateY(-1px); }
+@media (max-width: 860px) { body:not(.has-sidebar) .app-main { padding-top: 16px; } .public-header img { height: 44px; } }
