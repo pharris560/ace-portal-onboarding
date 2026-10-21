@@ -3,7 +3,7 @@ const { test, expect } = require('@playwright/test');
 
 const ADMIN = { id: 'recADMIN00000001', fields: { Email: 'pam@example.com', 'Full Name': 'Pam Admin', 'Account Type': { name: 'Administrator' } } }; // no hash: proxy scrubs it
 
-async function stub(page, { loginOk = true } = {}) {
+async function stub(page, { loginOk = true, baseSource = 'airtable' } = {}) {
   const j = (o, status = 200) => ({ status, contentType: 'application/json', body: JSON.stringify(o) });
   const calls = [];
   const accounts = [
@@ -16,6 +16,7 @@ async function stub(page, { loginOk = true } = {}) {
     calls.push({ fn: 'admin-login', body });
     return route.fulfill(loginOk ? j({ token: 'tok123', name: 'Pam Admin', email: 'pam@example.com' }) : j({ error: 'Incorrect email or password' }, 401));
   });
+  await page.route('**/.netlify/functions/base-info', (route) => route.fulfill(j({ name: '2026 - 2027 ACE Student Enrollment', baseId: 'appFVg5UNlwzJMuaY', source: baseSource })));
   await page.route('**/.netlify/functions/email-admin', async (route) => {
     const body = route.request().postDataJSON();
     calls.push({ fn: 'email-admin', auth: route.request().headers()['authorization'], body });
@@ -95,4 +96,45 @@ test('signing out drops the admin token', async ({ page }) => {
   await expect(page.locator('#view-dashboard')).toBeVisible();
   await page.evaluate(() => signOut());
   expect(await page.evaluate(() => adminToken)).toBeNull();
+});
+
+test('dashboard shows which Airtable database is in use (confirmed live)', async ({ page }) => {
+  await stub(page);
+  await signIn(page);
+  await expect(page.locator('#base-name')).toHaveText('2026 - 2027 ACE Student Enrollment');
+  await expect(page.locator('#base-note')).toContainText('Confirmed live from Airtable');
+});
+
+test('dashboard warns when the database name could not be confirmed by Airtable', async ({ page }) => {
+  await stub(page, { baseSource: 'recorded' });
+  await signIn(page);
+  await expect(page.locator('#base-name')).toHaveText('2026 - 2027 ACE Student Enrollment');
+  await expect(page.locator('#base-note')).toContainText('did not confirm');
+});
+
+test('Caps Lock warning shows on the login password box and hides on blur', async ({ page }) => {
+  await stub(page);
+  await page.goto('/index.html');
+  await page.evaluate(() => showView('login'));
+  const pw = page.locator('#login-password');
+  const hint = pw.locator('xpath=following-sibling::p[1]');
+  await expect(hint).toBeHidden();
+  await pw.focus();
+  await pw.evaluate((el) => el.dispatchEvent(new KeyboardEvent('keydown', { key: 'A', modifierCapsLock: true, bubbles: true })));
+  await expect(hint).toBeVisible();
+  await expect(hint).toContainText('Caps Lock is ON');
+  await pw.evaluate((el) => el.dispatchEvent(new KeyboardEvent('keyup', { key: 'CapsLock', modifierCapsLock: false, bubbles: true })));
+  await expect(hint).toBeHidden();
+  await pw.evaluate((el) => el.dispatchEvent(new KeyboardEvent('keydown', { key: 'A', modifierCapsLock: true, bubbles: true })));
+  await pw.blur();
+  await expect(hint).toBeHidden();
+});
+
+test('every password box (register, login, reset) gets the Caps Lock warning', async ({ page }) => {
+  await stub(page);
+  await page.goto('/index.html');
+  const n = await page.evaluate(() => [...document.querySelectorAll('input[type=password]')].filter(i => i.nextElementSibling && /Caps Lock/.test(i.nextElementSibling.textContent)).length);
+  const total = await page.evaluate(() => document.querySelectorAll('input[type=password]').length);
+  expect(total).toBeGreaterThanOrEqual(5);
+  expect(n).toBe(total);
 });

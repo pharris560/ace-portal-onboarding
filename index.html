@@ -899,6 +899,11 @@ tailwind.config = {
 
 <!-- VIEW: ADMIN DASHBOARD -->
 <main id="view-dashboard" class="max-w-7xl mx-auto px-6 py-10 hidden">
+  <div class="neu-raised rounded-2xl p-4 mb-6 flex items-center justify-between flex-wrap gap-2" id="base-banner">
+    <div><p class="text-[10px] text-gray-500 uppercase tracking-widest">Airtable database in use</p>
+    <p class="font-display text-base font-bold neon-text" id="base-name">Checking…</p></div>
+    <p class="text-[11px] text-gray-500" id="base-note"></p>
+  </div>
   <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8" id="stat-cards">
     <div class="neu-raised rounded-2xl p-5 text-center"><p class="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Total Students</p><p class="font-display text-2xl font-bold neon-text" id="stat-total">--</p><p class="text-[10px] text-green-500 mt-1" id="stat-total-sub">Loading...</p></div>
     <div class="neu-raised rounded-2xl p-5 text-center"><p class="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Active</p><p class="font-display text-2xl font-bold text-white" id="stat-active">--</p><p class="text-[10px] text-green-500 mt-1" id="stat-active-sub">Loading...</p></div>
@@ -1014,6 +1019,7 @@ function showView(view){
   if(view==='dashboard'&&atToken&&allStudents.length===0)refreshAirtableData();
   if(view==='dashboard')loadAdminCoverageSchedule();
   if(view==='dashboard'&&typeof loadEmailAccounts==='function'&&adminToken)loadEmailAccounts();
+  if(view==='dashboard'&&adminToken)loadBaseName();
 }
 
 /* ===== User Indicator + Sign Out ===== */
@@ -3359,6 +3365,46 @@ function routeCoverageHash(){
 }
 routeCoverageHash();
 window.addEventListener('hashchange', routeCoverageHash);
+
+/* ===== Which Airtable base is the portal using? (Administrator dashboard) ===== */
+async function loadBaseName(){
+  const nameEl=document.getElementById('base-name'),noteEl=document.getElementById('base-note');
+  if(!nameEl||!adminToken)return;
+  try{
+    const r=await fetch('/.netlify/functions/base-info',{headers:{Authorization:'Bearer '+adminToken}});
+    const j=await r.json();
+    if(!r.ok)throw new Error(j.error||'failed');
+    nameEl.textContent=j.name;
+    noteEl.textContent=j.source==='airtable'?'Confirmed live from Airtable':'Name from portal settings (Airtable did not confirm it) - check it matches the current school year';
+    noteEl.style.color=j.source==='airtable'?'':'#eab308';
+  }catch(_){
+    nameEl.textContent='Could not check the database name';
+    noteEl.textContent='Sign out and back in, then refresh';
+  }
+}
+
+/* ===== Caps Lock warning on every password box ===== */
+(function(){
+  function wire(inp){
+    if(inp.dataset.capsWired)return;
+    inp.dataset.capsWired='1';
+    const msg=document.createElement('p');
+    msg.setAttribute('role','alert');
+    msg.className='hidden text-xs mt-1.5';
+    msg.style.color='#eab308';
+    msg.textContent='\u21E7 Caps Lock is ON - your password is case-sensitive.';
+    inp.insertAdjacentElement('afterend',msg);
+    const check=function(e){
+      if(!e||typeof e.getModifierState!=='function')return;
+      msg.classList.toggle('hidden',!e.getModifierState('CapsLock'));
+    };
+    inp.addEventListener('keydown',check);
+    inp.addEventListener('keyup',check);
+    inp.addEventListener('blur',function(){msg.classList.add('hidden');});
+  }
+  function wireAll(){document.querySelectorAll('input[type="password"]').forEach(wire);}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',wireAll);else wireAll();
+})();
 </script>
 <script src="email-accounts.js"></script>
 </body>
