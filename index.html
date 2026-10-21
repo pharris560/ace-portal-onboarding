@@ -2562,8 +2562,10 @@ function renderPipeline(){
   }).sort((a,b)=>a.name.localeCompare(b.name));
 
   if(!allStudents.length){countEl.textContent='';out.innerHTML='<p class="text-sm text-gray-500 py-6 text-center">Loading student records…</p>';return;}
-  if(!q){countEl.textContent=rows.length+' student'+(rows.length===1?'':'s')+' match the filters. Type a name to search.';out.innerHTML='';return;}
-  countEl.textContent=rows.length+' result'+(rows.length===1?'':'s')+(rows.length>25?' (showing the first 25 — keep typing to narrow)':'');
+  /* A name search OR a Class selection lists students; Status alone just shows the match count. */
+  if(!q&&!classFilter){countEl.textContent=rows.length+' student'+(rows.length===1?'':'s')+' match the filters. Type a name to search, or pick a class to list its students.';out.innerHTML='';return;}
+  const LIMIT=100;
+  countEl.textContent=rows.length+(q?' result':' student')+(rows.length===1?'':'s')+(classFilter?' in '+classFilter:'')+(statusFilter?' · '+statusFilter:'')+(rows.length>LIMIT?' (showing the first '+LIMIT+' — type a name to narrow)':'');
   if(!rows.length){out.innerHTML='<p class="text-sm text-gray-500 py-6 text-center">No students found. Try fewer letters, or set Status to “All Statuses”.</p>';return;}
   const line=(label,val,kind)=>{
     if(!val)return '<div><p class="text-xs uppercase tracking-widest text-gray-500">'+label+'</p><p class="text-base text-gray-500">—</p></div>';
@@ -2571,7 +2573,7 @@ function renderPipeline(){
     const href=kind==='tel'?'tel:'+escapeHtml(val.replace(/[^\d+]/g,'')):kind==='mail'?'mailto:'+v:'';
     return '<div><p class="text-xs uppercase tracking-widest text-gray-500">'+label+'</p><p class="text-base text-white break-words">'+(href?'<a href="'+href+'" class="underline">'+v+'</a>':v)+'</p></div>';
   };
-  out.innerHTML=rows.slice(0,25).map((s,i)=>{
+  out.innerHTML=rows.slice(0,LIMIT).map((s,i)=>{
     const badge=s.status?'<span class="text-xs px-2 py-0.5 rounded-full" style="background:rgba(255,255,255,.55)">'+escapeHtml(s.status)+'</span>':'';
     return '<div class="neu-inset rounded-xl student-row" data-i="'+i+'">'
       +'<button type="button" class="student-head w-full flex items-center justify-between gap-3 text-left px-4 py-3" aria-expanded="false">'

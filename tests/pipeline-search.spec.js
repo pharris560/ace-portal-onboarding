@@ -63,6 +63,17 @@ test('status filter: All Statuses reveals withdrawn students; searching by paren
   await expect(page.locator('#student-results')).toContainText('No students found');
 });
 
+test('picking a Class alone lists that class\'s active students (no typing needed)', async ({ page }) => {
+  await setup(page);
+  await page.selectOption('#class-filter', 'Falcons');
+  await expect(page.locator('.student-row')).toHaveCount(2); // Ada + the evil-named one; Adam is Withdrawn
+  await expect(page.locator('#student-count')).toContainText('in Falcons');
+  await page.selectOption('#class-filter', 'Sparrows');
+  await expect(page.locator('#student-results')).toContainText('No students found');
+  await page.selectOption('#class-filter', '');
+  await expect(page.locator('.student-row')).toHaveCount(0);
+});
+
 test('record values render as text (no HTML injection)', async ({ page }) => {
   await setup(page);
   await page.fill('#student-search', 'evil');
