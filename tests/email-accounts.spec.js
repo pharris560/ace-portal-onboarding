@@ -20,7 +20,7 @@ async function stub(page, { loginOk = true, baseSource = 'airtable' } = {}) {
   await page.route('**/.netlify/functions/email-admin', async (route) => {
     const body = route.request().postDataJSON();
     calls.push({ fn: 'email-admin', auth: route.request().headers()['authorization'], body });
-    if (body.action === 'overview') return route.fulfill(j({ accounts, candidates: { staff: [], board: [{ holderId: 'recBOARD00000001', holderType: 'Board Member', first: 'Nia', last: 'Hart', personalEmail: 'nia@gmail.com', mobile: '+14045550199', boardRole: 'Secretary' }] }, roleKeys: { boardchair: 'Board Chair', boardvicechair: 'Board Vice Chair', boardtreasurer: 'Board Treasurer', boardsecretary: 'Board Secretary' }, licensesUsed: 9, licenseLimit: 300 }));
+    if (body.action === 'overview') return route.fulfill(j({ accounts, candidates: { staff: [], board: [{ holderId: 'recBOARD00000001', holderType: 'Board Member', first: 'Nia', last: 'Hart', personalEmail: 'nia@gmail.com', mobile: '+14045550199', boardRole: 'Secretary' }] }, roleKeys: { boardchair: 'Board Chair', boardvicechair: 'Board Vice Chair', boardtreasurer: 'Board Treasurer', boardsecretary: 'Board Secretary' }, licensesUsed: 9, licenseLimit: 300, existingMailboxes: ['acestaff@flyace.org', 'admin@flyace.org'] }));
     if (body.action === 'preview') return route.fulfill(j({ rows: body.people.map(p => ({ ...p, address: (p.roleKey || 'nia.hart') + '@flyace.org', kind: p.roleKey ? 'Role' : 'Personal', problems: [], notes: [] })) }));
     if (body.action === 'create') return route.fulfill(j({ results: [{ ok: true }], created: 1, skipped: 0 }));
     return route.fulfill(j({ ok: true }));
@@ -73,7 +73,7 @@ test('add a board member: review addresses, then create sends the right request'
   await page.locator('#email-accounts-card button', { hasText: 'Review addresses' }).click();
   await expect(page.locator('#email-accounts-card')).toContainText('✓ Ready');
   await page.locator('#email-accounts-card button', { hasText: 'Create 1 account' }).click();
-  await expect(page.locator('#email-accounts-card')).toContainText('Email Accounts (@flyace.org)');
+  await expect(page.locator('#email-accounts-card')).toContainText('Create Email Accounts');
   const create = calls.find(c => c.body && c.body.action === 'create').body;
   expect(create.people[0]).toMatchObject({ first: 'Nia', last: 'Hart', holderType: 'Board Member', holderId: 'recBOARD00000001', roleKey: 'boardsecretary' });
 });
@@ -157,4 +157,67 @@ test('sample CSV template downloads, and its example rows are skipped on upload'
   await page.fill('#email-accounts-card textarea', text + 'Real,Person,real@gmail.com,404-555-0100,staff,\r\n');
   await page.locator('#email-accounts-card button', { hasText: 'Review addresses' }).click();
   await expect(page.locator('#email-accounts-card')).toContainText('1 of 1 ready');
+});
+
+test('Find a user: shows who already has an @flyace.org address, with status', async ({ page }) => {
+  await stub(page);
+  await signIn(page);
+  const find = page.locator('#ea-find');
+  await expect(find).toBeVisible();
+  await expect(page.locator('#ea-find-results')).toBeEmpty();
+  await find.fill('dana');
+  const res = page.locator('#ea-find-results');
+  await expect(res).toContainText('Already has an @flyace.org address (1)');
+  await expect(res).toContainText('boardchair@flyace.org');
+  await expect(res).toContainText('Dana Cole – Board Chair');
+  await expect(res).toContainText('Waiting: Create');
+  await find.fill('BOARDCHAIR');            // case-insensitive, matches the role key / address
+  await expect(res).toContainText('boardchair@flyace.org');
+  await find.fill('dana board');            // every word must match
+  await expect(res).toContainText('boardchair@flyace.org');
+  await find.fill('dana treasurer');
+  await expect(res).toContainText('No match');
+});
+
+test('Find a user: a person in Board Members without an address can be sent straight to review', async ({ page }) => {
+  const calls = await stub(page);
+  await signIn(page);
+  await page.locator('#ea-find').fill('hart');
+  const res = page.locator('#ea-find-results');
+  await expect(res).toContainText('no @flyace.org address yet (1)');
+  await expect(res).toContainText('Nia Hart');
+  await res.getByRole('button', { name: 'Create address' }).click();
+  await expect(page.locator('#email-accounts-card')).toContainText('✓ Ready');
+  const prev = calls.filter(c => c.body && c.body.action === 'preview').at(-1).body;
+  expect(prev.people[0]).toMatchObject({ first: 'Nia', last: 'Hart', holderType: 'Board Member', holderId: 'recBOARD00000001' });
+  expect(calls.filter(c => c.body && c.body.action === 'create')).toHaveLength(0); // review only, nothing created
+});
+
+test('Find a user: finds the existing pre-move mailboxes, never shows markup, and says when nobody matches', async ({ page }) => {
+  await stub(page);
+  const errors = []; page.on('pageerror', e => { if (!/tailwind/.test(String(e))) errors.push(String(e)); }); // tailwind is stubbed in tests
+  await signIn(page);
+  const find = page.locator('#ea-find'), res = page.locator('#ea-find-results');
+  await find.fill('acestaff');
+  await expect(res).toContainText('Existing mailbox from before the move');
+  await expect(res).toContainText('acestaff@flyace.org');
+  await find.fill('bad');
+  await expect(res).toContainText('<b>Bad</b> Name');             // shown as text
+  expect(await res.locator('b').count()).toBe(0);
+  expect(await page.evaluate(() => window.__xss)).toBeUndefined();
+  await find.fill('zzzzzz');
+  await expect(res).toContainText('No match');
+  await res.getByRole('button', { name: 'Add by hand' }).click();
+  await expect(page.locator('#email-accounts-card')).toContainText('Or add one person by hand');
+  await expect(find).toHaveValue('zzzzzz');                        // the search text survives switching tabs
+  await find.fill('');
+  await expect(res).toBeEmpty();
+  expect(errors).toEqual([]);
+});
+
+test('the card and its sidebar link are named Create Email Accounts', async ({ page }) => {
+  await stub(page);
+  await signIn(page);
+  await expect(page.locator('#email-accounts-card h3')).toHaveText('Create Email Accounts');
+  await expect(page.locator('#sidebar [data-nav="Email Accounts"]')).toContainText('Create Email Accounts');
 });

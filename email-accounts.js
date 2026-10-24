@@ -4,7 +4,8 @@
 (function () {
   const API = '/.netlify/functions/email-admin';
   const ROLE_BY_BOARD = { 'Chair': 'boardchair', 'Vice Chair': 'boardvicechair', 'Treasurer': 'boardtreasurer', 'Secretary': 'boardsecretary' };
-  let state = { accounts: [], candidates: { staff: [], board: [] }, roleKeys: {}, licensesUsed: 0, licenseLimit: 300 };
+  let state = { accounts: [], candidates: { staff: [], board: [] }, roleKeys: {}, licensesUsed: 0, licenseLimit: 300, existingMailboxes: [] };
+  let searchText = ''; /* the "find a user" box; kept across re-renders */
   let draft = [];      /* people waiting to be previewed/created */
   let previewRows = null;
   let tab = 'accounts';
@@ -48,14 +49,61 @@
       h('button', { type: 'button', onclick: () => { tab = k; previewRows = null; render(); }, class: 'px-3 py-1.5 rounded-lg text-base ' + (tab === k ? 'neu-btn neon-text' : 'text-gray-400') }, l));
     root.replaceChildren(
       h('div', { class: 'flex items-center justify-between mb-2 flex-wrap gap-2' },
-        h('h3', { class: 'font-display text-base font-bold neon-text' }, 'Email Accounts (@flyace.org)'),
+        h('h3', { class: 'font-display text-base font-bold neon-text' }, 'Create Email Accounts'),
         h('div', { class: 'flex items-center gap-3' },
           h('span', { class: 'text-sm text-gray-400' }, `${state.licensesUsed} of ${state.licenseLimit} free licenses in use`),
           h('a', { class: 'text-sm underline neon-text-subtle', href: 'email-setup.html', target: '_blank', rel: 'noopener' }, 'Setup guide for new users'),
           btn('↻ Refresh', load))),
       h('p', { class: 'text-base text-gray-500 mb-4' }, 'Requests are saved here and carried out in Microsoft by the email workflow. "Waiting" means it has not been processed yet. Temporary passwords are texted to the person; they are never shown or stored here.'),
+      renderFind(),
       h('div', { class: 'flex gap-2 mb-4' }, tabs),
       tab === 'accounts' ? renderAccounts() : tab === 'add' ? renderAdd() : renderUpload());
+  }
+
+  /* ---------- find a user: does this person already have an @flyace.org address? ---------- */
+  const norm = (v) => String(v || '').toLowerCase();
+  const digits = (v) => String(v || '').replace(/\D/g, '');
+  const matches = (hay, q) => q.every(t => hay.includes(t));
+  function findResults(text) {
+    const q = norm(text).split(/\s+/).filter(Boolean);
+    if (!q.length) return null;
+    const accounts = state.accounts.filter(a => matches(norm([a.address, a.displayName, a.holderName, a.holderType, a.roleKey, a.personalEmail, a.mobile, digits(a.mobile), a.status].join(' ')), q));
+    const taken = new Set(state.accounts.map(a => norm(a.address)));
+    const legacy = (state.existingMailboxes || []).filter(m => !taken.has(norm(m)) && matches(norm(m), q));
+    const without = [...state.candidates.staff, ...state.candidates.board].filter(p => matches(norm([p.first, p.last, p.personalEmail, p.mobile, digits(p.mobile), p.holderType, p.boardRole].join(' ')), q));
+    return { accounts, legacy, without };
+  }
+  function renderFind() {
+    const box = h('div', { class: 'mb-4' });
+    const inp = h('input', { type: 'search', id: 'ea-find', class: 'neu-input text-base px-4 py-2.5 rounded-xl w-full', placeholder: 'Find a user: name, @flyace.org address, personal email or mobile…', autocomplete: 'off', 'aria-label': 'Find a user to see if they already have an ACE email address' });
+    inp.value = searchText;
+    const out = h('div', { id: 'ea-find-results', 'aria-live': 'polite' });
+    const paint = () => out.replaceChildren(...resultsView(findResults(searchText)));
+    inp.addEventListener('input', () => { searchText = inp.value; paint(); });
+    paint();
+    box.append(inp, out);
+    return box;
+  }
+  function resultsView(r) {
+    if (!r) return [];
+    const nothing = !r.accounts.length && !r.legacy.length && !r.without.length;
+    const card = (kids) => h('div', { class: 'neu-raised rounded-xl p-3 mt-3 space-y-2' }, kids);
+    const title = (t) => h('p', { class: 'text-sm text-gray-500 uppercase tracking-widest' }, t);
+    const out = [];
+    if (r.accounts.length) out.push(card([title(`Already has an @flyace.org address (${r.accounts.length})`), ...r.accounts.map(a =>
+      h('div', { class: 'flex flex-wrap items-center justify-between gap-2 border-b border-gray-800 pb-2' },
+        h('div', {}, h('div', { class: 'text-white text-base' }, a.address), h('div', { class: 'text-sm text-gray-500' }, [a.displayName || a.holderName, a.kind === 'Role' ? 'Role address' : a.holderType, a.personalEmail].filter(Boolean).join(' · '))),
+        h('div', { class: 'flex items-center gap-2' }, badge(a), btn('Manage', () => { tab = 'accounts'; previewRows = null; render(); }))))]));
+    if (r.legacy.length) out.push(card([title(`Existing mailbox from before the move (${r.legacy.length})`), ...r.legacy.map(m =>
+      h('div', { class: 'text-base text-white' }, m, h('span', { class: 'text-sm text-gray-500' }, '  · active now; becomes manageable here after the move')))]));
+    if (r.without.length) out.push(card([title(`In Staff / Board Members, no @flyace.org address yet (${r.without.length})`), ...r.without.map(p =>
+      h('div', { class: 'flex flex-wrap items-center justify-between gap-2 border-b border-gray-800 pb-2' },
+        h('div', {}, h('div', { class: 'text-white text-base' }, `${p.first} ${p.last}`.trim()), h('div', { class: 'text-sm text-gray-500' }, [p.holderType, p.boardRole, p.personalEmail].filter(Boolean).join(' · '))),
+        btn('Create address', () => { draft = [{ ...p, roleKey: '' }]; tab = 'add'; runPreview(); }, 'neon-text')))]));
+    if (nothing) out.push(card([h('p', { class: 'text-base text-gray-300' }, 'No match. This person has no @flyace.org address and is not an active person in Staff or Board Members.'),
+      h('p', { class: 'text-sm text-gray-500' }, 'If they should have an address, add them by hand or upload a spreadsheet.'),
+      btn('Add by hand →', () => { tab = 'add'; previewRows = null; render(); })]));
+    return out;
   }
 
   const badge = (a) => {

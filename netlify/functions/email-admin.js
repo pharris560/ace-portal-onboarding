@@ -107,7 +107,7 @@ const ACTIONS = {
       .map(r => person(r, 'Staff', r.fields['Full Name'], r.fields.Email, r.fields.Phone));
     const board = (await listAll(T.board)).filter(r => name(r.fields.Status) === 'Active' && !has.has(r.id))
       .map(r => ({ ...person(r, 'Board Member', r.fields['Full Name'], r.fields['Personal Email'], r.fields.Mobile), boardRole: name(r.fields['Board Role']) }));
-    return { accounts, candidates: { staff, board }, licensesUsed: accounts.filter(a => a.status !== 'Disabled').length + EXISTING.length, licenseLimit: 300, roleKeys: ROLE_KEYS };
+    return { accounts, candidates: { staff, board }, licensesUsed: accounts.filter(a => a.status !== 'Disabled').length + EXISTING.length, licenseLimit: 300, roleKeys: ROLE_KEYS, existingMailboxes: EXISTING.map(x => x + '@flyace.org') };
   },
 
   async preview(body) {
