@@ -7,6 +7,7 @@ const PORT = 8848;
 
 module.exports = defineConfig({
   testDir: './tests',
+  testMatch: '**/*.spec.js', // *.test.js files are node:test server tests (npm run test:server)
   timeout: 30000,
   expect: { timeout: 8000 },
   fullyParallel: false,
