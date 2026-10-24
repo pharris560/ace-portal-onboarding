@@ -16,12 +16,18 @@ add('recSTAFF', 'staff@example.com', 'Staff', null);
 add('recVOL', 'vol@example.com', 'Volunteer', null);
 add('recBOARD', 'board@example.com', 'Board', null);
 const writes = [];
+let failPatch = false;
 global.fetch = async (url, opts = {}) => {
   const u = new URL(url);
   const ok = (o) => ({ ok: true, status: 200, json: async () => o, text: async () => JSON.stringify(o) });
   const m = u.pathname.match(/\/v0\/appFVg5UNlwzJMuaY\/tblwJ9C1BQIMGMzKx(?:\/(rec\w+))?$/);
   if (!m) return { ok: false, status: 404, json: async () => ({}), text: async () => '{}' };
-  if (opts.method && opts.method !== 'GET') { writes.push({ method: opts.method, url, body: opts.body }); return ok({ id: m[1] || 'recNEW', fields: {} }); }
+  if (opts.method && opts.method !== 'GET') {
+    writes.push({ method: opts.method, url, body: opts.body });
+    if (opts.method === 'PATCH' && m[1] && accounts[m[1]] && !failPatch) Object.assign(accounts[m[1]].fields, JSON.parse(opts.body).fields);
+    if (failPatch) return { ok: false, status: 422, json: async () => ({}), text: async () => '{}' };
+    return ok({ id: m[1] || 'recNEW', fields: {} });
+  }
   if (m[1]) return accounts[m[1]] ? ok(accounts[m[1]]) : { ok: false, status: 404, json: async () => ({}), text: async () => '{}' };
   const f = u.searchParams.get('filterByFormula') || '';
   const em = f.match(/LOWER\(\{Email\}\)='([^']+)'/);
@@ -144,4 +150,94 @@ test('proxy: a browser cannot edit or delete Administrator, Staff, Volunteer or 
       assert.equal(r.statusCode, 403, method + ' ' + id);
     }
   }
+});
+
+/* ---------- stage 2: salted slow hashes with silent upgrade ---------- */
+const P = require('../netlify/functions/lib/password');
+
+test('first sign-in with an old SHA-256 account silently stores a salted scrypt hash', async () => {
+  add('recOLD', 'old@example.com', 'Existing Student', 'old-pw-1');
+  assert.equal(accounts.recOLD.fields['Password Hash V2'], undefined);
+  const r = await post('old@example.com', 'old-pw-1');
+  assert.equal(r.statusCode, 200);
+  const v2 = accounts.recOLD.fields['Password Hash V2'];
+  const parts = v2.split('$');
+  assert.deepEqual(parts.slice(0, 4), ['scrypt', '16384', '8', '1']);
+  assert.equal(parts.length, 7);
+  assert.equal(Buffer.from(parts[4], 'base64').length, 16); // 16-byte random salt
+  assert.equal(Buffer.from(parts[5], 'base64').length, 64);
+  assert.ok(!v2.includes(sha('old-pw-1')) && !v2.includes('old-pw-1'));
+  assert.ok(!JSON.parse(r.body).hasOwnProperty('password'));
+});
+test('two upgrades of the same password get different salts and different hashes', async () => {
+  const a = await P.makeV2('same-pw', 'x'), b = await P.makeV2('same-pw', 'x');
+  assert.notEqual(a.split('$')[4], b.split('$')[4]);
+  assert.notEqual(a.split('$')[5], b.split('$')[5]);
+});
+test('after the upgrade the scrypt hash alone is enough (the legacy column can be cleaned up later)', async () => {
+  delete accounts.recOLD.fields['Password Hash'];
+  assert.equal((await post('old@example.com', 'wrong-pw')).statusCode, 401);
+  assert.equal((await post('old@example.com', 'old-pw-1')).statusCode, 200);
+});
+test('upgraded account: right password works, wrong one fails', async () => {
+  add('recUP', 'up@example.com', 'Existing Student', 'up-pw-1');
+  assert.equal((await post('up@example.com', 'up-pw-1')).statusCode, 200); // upgrades
+  assert.ok(accounts.recUP.fields['Password Hash V2']);
+  assert.equal((await post('up@example.com', 'up-pw-1')).statusCode, 200); // verified via scrypt
+  assert.equal((await post('up@example.com', 'wrong-pw')).statusCode, 401);
+  const writesBefore = writes.length;
+  await post('up@example.com', 'up-pw-1');
+  assert.equal(writes.length, writesBefore); // no rewrite once upgraded
+});
+test('changing the legacy hash later (browser reset, or pasted in Airtable) wins over a stale V2', async () => {
+  add('recRST', 'rst@example.com', 'Existing Student', 'first-pw-1');
+  await post('rst@example.com', 'first-pw-1'); // upgrade
+  accounts.recRST.fields['Password Hash'] = sha('reset-pw-2'); // what the old reset flow / a manual edit does
+  assert.equal((await post('rst@example.com', 'first-pw-1')).statusCode, 401, 'old password must stop working');
+  assert.equal((await post('rst@example.com', 'reset-pw-2')).statusCode, 200);
+  assert.equal((await post('rst@example.com', 'reset-pw-2')).statusCode, 200); // now verified by the refreshed V2
+});
+test('a failed upgrade write never blocks sign-in', async () => {
+  add('recFAIL', 'fail@example.com', 'Existing Student', 'fail-pw-1');
+  failPatch = true;
+  try { assert.equal((await post('fail@example.com', 'fail-pw-1')).statusCode, 200); } finally { failPatch = false; }
+});
+test('administrator accounts upgrade too', async () => {
+  add('recADM2', 'adm2@example.com', 'Administrator', 'adm-pw-1');
+  const r = await post('adm2@example.com', 'adm-pw-1');
+  assert.ok(JSON.parse(r.body).token);
+  assert.ok(accounts.recADM2.fields['Password Hash V2']);
+});
+test('an account with no password at all cannot sign in with an empty-hash trick', async () => {
+  add('recNOPW', 'nopw@example.com', 'Existing Student', null);
+  assert.equal((await post('nopw@example.com', 'anything')).statusCode, 401);
+  accounts.recNOPW.fields['Password Hash'] = sha('');
+  assert.equal((await post('nopw@example.com', 'anything')).statusCode, 401);
+});
+test('hashing cost is real but fast enough for sign-in (well under a second)', async () => {
+  const t = Date.now(); await P.makeV2('timing-test', 'x'); const ms = Date.now() - t;
+  assert.ok(ms > 5 && ms < 1000, 'took ' + ms + 'ms');
+});
+
+/* proxy: hashes never reach the browser */
+const proxyGet = async (rec) => {
+  const fetch0 = global.fetch;
+  global.fetch = async (url, o) => (String(url).includes('filterByFormula') || /tblwJ9C1BQIMGMzKx\/rec/.test(String(url)))
+    ? { ok: true, status: 200, text: async () => JSON.stringify({ records: [{ id: rec.id, fields: rec.fields }] }), json: async () => ({}) } : fetch0(url, o);
+  try {
+    return await proxy({ httpMethod: 'GET', queryStringParameters: { _path: '/appFVg5UNlwzJMuaY/tblwJ9C1BQIMGMzKx' }, rawQuery: "_path=%2FappFVg5UNlwzJMuaY%2FtblwJ9C1BQIMGMzKx&filterByFormula=" + encodeURIComponent("LOWER({Email})='x@y.z'") });
+  } finally { global.fetch = fetch0; }
+};
+test('proxy: password hashes are removed from every Portal Accounts read (parents, staff, admins)', async () => {
+  for (const id of ['recUP', 'recPARENT', 'recADMIN']) {
+    const r = await proxyGet(accounts[id]);
+    assert.equal(r.statusCode, 200);
+    const f = JSON.parse(r.body).records[0].fields;
+    assert.equal(f['Password Hash'], undefined, id); assert.equal(f['Password Hash V2'], undefined, id);
+    assert.ok(f.Email, 'other fields still come through');
+  }
+});
+test('proxy: a browser can never write the V2 hash field (create or edit)', async () => {
+  assert.equal((await proxyWrite('POST', { fields: { Email: 'q@y.z', 'Account Type': 'New Applicant', 'Password Hash V2': 'x' } })).statusCode, 403);
+  assert.equal((await proxyWrite('PATCH', { fields: { 'Password Hash V2': 'x' } }, '/appFVg5UNlwzJMuaY/tblwJ9C1BQIMGMzKx/recPARENT')).statusCode, 403);
 });

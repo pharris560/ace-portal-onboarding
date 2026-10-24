@@ -3,7 +3,7 @@
      Administrator -> 30 minutes (also returns the bearer token the email-admin tools use)
      Parent/Student -> 2 hours
      Staff / Volunteer / Board -> no password; they sign in with an emailed one-time code (later stage). */
-const crypto = require('crypto');
+const { verifyPassword } = require('./lib/password');
 const { BASE_ID, TABLE_ACCOUNTS, CODE_ROLES, roleFor, sessionMinutes, signToken, sessionCookie, airtable, json } = require('./lib/session');
 
 /* Best-effort throttle (per warm function instance): 5 bad tries / 15 min per email. */
@@ -34,14 +34,17 @@ exports.handler = async function (event) {
   const role = roleFor(acct.fields['Account Type']);
   if (CODE_ROLES.includes(role)) return json(409, { error: 'Staff and volunteers sign in with an emailed code, not a password.', method: 'code' });
 
-  const given = crypto.createHash('sha256').update(password).digest();
-  const hex = acct.fields['Password Hash'] || '';
-  const stored = /^[0-9a-f]{64}$/i.test(hex) ? Buffer.from(hex, 'hex') : crypto.randomBytes(32);
-  if (!crypto.timingSafeEqual(given, stored)) {
+  const check = await verifyPassword(password, acct.fields);
+  if (!check.ok) {
     fails.set(email, [...(fails.get(email) || []), Date.now()]);
     return json(401, { error: 'Incorrect password. Please try again.' });
   }
   fails.delete(email);
+
+  /* Silent upgrade: an old SHA-256 account gets its salted scrypt hash now. A failed write never blocks sign-in. */
+  if (check.upgrade) {
+    await airtable('PATCH', '/' + BASE_ID + '/' + TABLE_ACCOUNTS + '/' + acct.id, { fields: { 'Password Hash V2': check.upgrade } }).catch(() => null);
+  }
 
   const minutes = sessionMinutes(role);
   const out = {

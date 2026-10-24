@@ -14,7 +14,10 @@ const SERVER_ONLY = [
   { id: 'tblcHVVOwvXRAH64L', name: 'email activity' },
   { id: 'tblJMfsctvEKNdEp8', name: 'board members' }
 ];
-const SECRET_FIELDS = ['Password Hash', 'Security Answer Hash'];
+/* Password hashes are never sent to a browser: sign-in is checked on the server. Admins' security
+   answers are hidden too; other accounts' answers are still read by the (old) browser reset flow. */
+const HASH_FIELDS = ['Password Hash', 'Password Hash V2'];
+const ADMIN_SECRET_FIELDS = ['Security Answer Hash'];
 
 const reply = (statusCode, message) => ({
   statusCode, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: { message } })
@@ -71,6 +74,7 @@ exports.handler = async function (event) {
       if (body && body.performUpsert) return reply(403, 'Forbidden.');
       const rows = body ? (Array.isArray(body.records) ? body.records : [body]) : [];
       for (const row of rows) {
+        if (row?.fields && 'Password Hash V2' in row.fields) return reply(403, 'That field is managed by the server.');
         if (isAdminValue(row?.fields?.['Account Type'])) return reply(403, 'Administrator accounts can only be changed in Airtable.');
         if (isOtherType(row?.fields?.['Account Type'])) return reply(403, 'That account type can only be set in Airtable.');
       }
@@ -96,11 +100,11 @@ exports.handler = async function (event) {
     const response = await fetch(airtableUrl, fetchOptions);
     let text = await response.text();
 
-    /* Admin password hashes never leave the server; Administrators sign in through admin-login. */
+    /* Password hashes never leave the server; everyone signs in through portal-login. */
     if (isType(table, ACCOUNTS) && isRead && response.ok) {
       try {
         const j = JSON.parse(text);
-        const scrub = (rec) => { if (rec?.fields && isAdminValue(rec.fields['Account Type'])) SECRET_FIELDS.forEach(k => delete rec.fields[k]); };
+        const scrub = (rec) => { if (!rec?.fields) return; HASH_FIELDS.forEach(k => delete rec.fields[k]); if (isAdminValue(rec.fields['Account Type'])) ADMIN_SECRET_FIELDS.forEach(k => delete rec.fields[k]); };
         (j.records || [j]).forEach(scrub);
         text = JSON.stringify(j);
       } catch (_) { /* leave as is */ }
