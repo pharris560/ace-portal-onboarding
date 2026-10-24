@@ -5,6 +5,7 @@
    <fingerprint> ties the V2 value to the legacy hash it was made from. If anyone changes the legacy
    hash afterwards (the security-question reset in the browser, or a hash pasted into Airtable),
    the fingerprint stops matching, V2 is ignored, the legacy hash is checked, and V2 is rewritten.
+   The Staff Portal's own "scrypt$salt$hash" format in the legacy column is accepted as-is.
    The legacy column is kept for now so a rollback to the previous release still works; once it is
    deliberately blanked (a later cleanup), V2 alone is trusted. */
 const crypto = require('crypto');
@@ -33,7 +34,20 @@ const legacyHash = (password) => crypto.createHash('sha256').update(password).di
 
 /* Returns { ok, upgrade }. upgrade = a new V2 string the caller should store (only after a correct legacy match). */
 async function verifyPassword(password, fields) {
-  const legacyHex = fields['Password Hash'] || '';
+  const legacyHex = String(fields['Password Hash'] || '').trim();
+
+  /* The Staff Portal (staff-portal.flyace.org) shares this column and stores passwords changed there
+     as "scrypt$<salt>$<hex>" (salt used as text, scrypt defaults, 32-byte key). Accept it, so one
+     password works on both portals. It is already salted and slow, so there is nothing to upgrade. */
+  if (legacyHex.startsWith('scrypt$')) {
+    const [, salt, expected] = legacyHex.split('$');
+    if (!salt || !expected) return { ok: false };
+    let actual;
+    try { actual = (await scrypt(password, salt, 16384, 8, 1, 32)).toString('hex'); } catch (_) { return { ok: false }; }
+    const a = Buffer.from(actual), b = Buffer.from(expected.toLowerCase());
+    return { ok: a.length === b.length && crypto.timingSafeEqual(a, b) };
+  }
+
   const v2 = fields['Password Hash V2'] || '';
   const parts = v2.split('$');
   const v2Fresh = parts.length === 7 && parts[0] === 'scrypt' && (legacyHex === '' || parts[6] === fingerprint(legacyHex));

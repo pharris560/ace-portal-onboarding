@@ -241,3 +241,30 @@ test('proxy: a browser can never write the V2 hash field (create or edit)', asyn
   assert.equal((await proxyWrite('POST', { fields: { Email: 'q@y.z', 'Account Type': 'New Applicant', 'Password Hash V2': 'x' } })).statusCode, 403);
   assert.equal((await proxyWrite('PATCH', { fields: { 'Password Hash V2': 'x' } }, '/appFVg5UNlwzJMuaY/tblwJ9C1BQIMGMzKx/recPARENT')).statusCode, 403);
 });
+
+test('a password changed in the Staff Portal (scrypt$salt$hash in Password Hash) works here too, with no upgrade write', async () => {
+  const salt = 'a1b2c3d4e5f60708';
+  const hash = crypto.scryptSync('staff-portal-pw-1', salt, 32).toString('hex');
+  add('recSP', 'sp@example.com', 'Existing Student', null);
+  accounts.recSP.fields['Password Hash'] = 'scrypt$' + salt + '$' + hash;
+  const before = writes.length;
+  assert.equal((await post('sp@example.com', 'staff-portal-pw-1')).statusCode, 200);
+  assert.equal((await post('sp@example.com', 'wrong-pw-xx')).statusCode, 401);
+  assert.equal(writes.length, before);
+  assert.equal(accounts.recSP.fields['Password Hash V2'], undefined);
+});
+test('a malformed scrypt$ value never signs anyone in', async () => {
+  add('recBAD', 'bad@example.com', 'Existing Student', null);
+  for (const v of ['scrypt$', 'scrypt$onlysalt', 'scrypt$$', 'scrypt$salt$']) {
+    accounts.recBAD.fields['Password Hash'] = v;
+    assert.equal((await post('bad@example.com', 'anything-1')).statusCode, 401, v);
+  }
+});
+test('changing a password in the Staff Portal after an upgrade replaces the stale V2', async () => {
+  add('recSW', 'sw@example.com', 'Existing Student', 'old-pw-9');
+  await post('sw@example.com', 'old-pw-9'); // V2 created
+  const salt = '0011223344556677';
+  accounts.recSW.fields['Password Hash'] = 'scrypt$' + salt + '$' + crypto.scryptSync('new-pw-9', salt, 32).toString('hex');
+  assert.equal((await post('sw@example.com', 'old-pw-9')).statusCode, 401);
+  assert.equal((await post('sw@example.com', 'new-pw-9')).statusCode, 200);
+});
