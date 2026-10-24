@@ -5,6 +5,7 @@
    (which was the cause of uploads hanging on "uploading"). Only the Airtable PAT
    is required — the same one the main airtable.js proxy already uses. */
 const https = require('https');
+const { scanBuffer } = require('./lib/scan');
 
 const BASE_ID = 'appFVg5UNlwzJMuaY';
 const MAX_BYTES = 5 * 1024 * 1024; /* Airtable uploadAttachment limit: 5 MB */
@@ -50,6 +51,15 @@ exports.handler = async function (event) {
     };
   }
 
+  /* Every file is virus-scanned BEFORE it is stored. Fail closed: no scan, no upload. */
+  const scan = await scanBuffer(Buffer.from(base64, 'base64'), filename, contentType);
+  if (scan.status === 'infected') {
+    return { statusCode: 422, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: { message: 'This file was blocked because the virus scan found a problem (' + scan.virus + '). Please do not upload it. Scan your device and try a different copy of the document.' }, scan: 'infected' }) };
+  }
+  if (scan.status !== 'clean') {
+    return { statusCode: 503, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: { message: 'We could not scan this file for viruses right now, so it was not uploaded. Please try again in a few minutes. (' + scan.reason + ')' }, scan: 'unavailable' }) };
+  }
+
   const body = JSON.stringify({
     contentType: contentType || 'application/octet-stream',
     file: base64,
@@ -71,6 +81,6 @@ exports.handler = async function (event) {
   return {
     statusCode: result.status,
     headers: { 'Content-Type': 'application/json' },
-    body: result.body || JSON.stringify({ ok: true })
+    body: result.body || JSON.stringify({ ok: true, scan: 'clean' })
   };
 };

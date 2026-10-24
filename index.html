@@ -119,6 +119,17 @@ tailwind.config = {
 .ace-upl{display:inline-flex;align-items:center;gap:6px;line-height:1.3}
 .ace-spin{width:12px;height:12px;border:2px solid rgba(148,163,184,0.3);border-top-color:currentColor;border-radius:50%;display:inline-block;animation:ace-spin .7s linear infinite;flex:none}
 @keyframes ace-spin{to{transform:rotate(360deg)}}
+/* virus-scan animation: a shield with a scan line sweeping top-to-bottom */
+.ace-bigscan{position:relative;width:64px;height:64px;color:#2f66c8}
+.ace-bigscan svg{width:64px;height:64px;display:block;animation:ace-scanpulse 1.4s ease-in-out infinite}
+.ace-bigscan i{position:absolute;left:12px;right:12px;top:10px;height:3px;border-radius:3px;background:linear-gradient(90deg,transparent,#22c55e,transparent);box-shadow:0 0 10px #22c55e;animation:ace-scanline 1.3s ease-in-out infinite}
+.ace-scan{position:relative;width:16px;height:16px;display:inline-block;flex:none;color:#2f66c8}
+.ace-scan svg{width:16px;height:16px;display:block;animation:ace-scanpulse 1.4s ease-in-out infinite}
+.ace-scan i{position:absolute;left:3px;right:3px;top:3px;height:2px;border-radius:2px;background:#22c55e;animation:ace-scanline-s 1.3s ease-in-out infinite}
+@keyframes ace-scanline{0%,100%{transform:translateY(0);opacity:.2}50%{transform:translateY(40px);opacity:1}}
+@keyframes ace-scanline-s{0%,100%{transform:translateY(0);opacity:.2}50%{transform:translateY(9px);opacity:1}}
+@keyframes ace-scanpulse{0%,100%{opacity:.75}50%{opacity:1}}
+@media (prefers-reduced-motion:reduce){.ace-bigscan svg,.ace-bigscan i,.ace-scan svg,.ace-scan i{animation:none}}
 .ace-check,.ace-x{width:14px;height:14px;display:inline-flex;align-items:center;justify-content:center;flex:none}
 .ace-check svg,.ace-x svg{width:14px;height:14px}
 .ace-upl-success .ace-check{animation:ace-pop .35s cubic-bezier(.2,.8,.2,1)}
@@ -933,6 +944,7 @@ tailwind.config = {
     </div>
     <p class="font-display text-3xl font-extrabold neon-text mb-2 hidden" id="class-total" aria-live="polite"></p>
     <p class="text-base text-gray-500 mb-3 hidden" id="class-note">For more details, select the student's name. To send a group email, please log in to the <a href="https://staff-portal.flyace.org" target="_blank" rel="noopener" class="underline font-semibold">Staff Portal</a>.</p>
+    <div class="mb-3 hidden" id="email-group-wrap"><button type="button" id="email-group-btn" class="neu-btn px-4 py-2 rounded-lg text-sm neon-text-subtle">✉ Email this group</button></div>
     <p class="text-sm text-gray-500 mb-3" id="student-count" aria-live="polite"></p>
     <div id="student-results" class="grid gap-3"></div>
   </div>
@@ -1360,11 +1372,12 @@ function setDropStatus(el,state,msg){
   if(!el) return;
   const icon={
     uploading:'<span class="ace-spin"></span>',
+    scanning:'<span class="ace-scan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 5-3.2 8.4-7 10-3.8-1.6-7-5-7-10V6z"/></svg><i></i></span>',
     reading:'<span class="ace-spin"></span>',
     success:'<span class="ace-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path d="M4 12l5 5 11-11" stroke-linecap="round" stroke-linejoin="round"/></svg></span>',
     error:'<span class="ace-x"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path d="M6 6l12 12M18 6L6 18" stroke-linecap="round"/></svg></span>'
   }[state]||'';
-  const color={uploading:'#9ca3af',reading:'#00b4ff',success:'#22c55e',error:'#f87171'}[state]||'';
+  const color={scanning:'#2f66c8',uploading:'#9ca3af',reading:'#00b4ff',success:'#22c55e',error:'#f87171'}[state]||'';
   el.className='text-[11px] mt-1 font-medium';
   el.style.color=color;
   el.classList.remove('hidden');
@@ -1384,7 +1397,8 @@ function ensureUploadModal(){
 function showUploadModal(state,title,sub){
   var m=ensureUploadModal(); clearTimeout(_aceModalTimer);
   var ic=document.getElementById('ace-micon');
-  if(state==='uploading'||state==='reading') ic.innerHTML='<div class="ace-bigspin"></div>';
+  if(state==='scanning') ic.innerHTML='<div class="ace-bigscan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 5-3.2 8.4-7 10-3.8-1.6-7-5-7-10V6z"/></svg><i></i></div>';
+  else if(state==='uploading'||state==='reading') ic.innerHTML='<div class="ace-bigspin"></div>';
   else if(state==='success') ic.innerHTML='<div class="ace-bigok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 12l5 5 11-11" stroke-linecap="round" stroke-linejoin="round"/></svg></div>';
   else ic.innerHTML='<div class="ace-bigbad"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M6 6l12 12M18 6L6 18" stroke-linecap="round"/></svg></div>';
   document.getElementById('ace-mtitle').textContent=title||'';
@@ -1432,8 +1446,8 @@ async function uploadDocToAirtable(file,fieldId,statusId){
   }
   if(!fieldId){ showUploadModal('error','Not configured','Upload field not configured — contact admin.'); setDropStatus(s,'error','Upload field not configured — contact admin.'); return; }
   const isCitizenship=(fieldId===AT_FIELD_ATTACHMENTS);
-  showUploadModal('uploading','Uploading document','Please wait a moment…');
-  setDropStatus(s,'uploading','Uploading '+file.name+'…');
+  showUploadModal('scanning','Scanning for viruses…','Checking '+file.name+' before it is saved');
+  setDropStatus(s,'scanning','Scanning '+file.name+' for viruses…');
   const reader=new FileReader();
   reader.onload=async(e)=>{
     const base64=e.target.result.split(',')[1];
@@ -1447,8 +1461,8 @@ async function uploadDocToAirtable(file,fieldId,statusId){
       }).finally(()=>clearTimeout(_to));
       let txt='';try{txt=await res.text();}catch(_){}
       if(res.ok){
-        showUploadModal('success','Uploaded!',file.name);
-        setDropStatus(s,'success','Uploaded — '+file.name);
+        showUploadModal('success','Scanned clean — uploaded!',file.name);
+        setDropStatus(s,'success','Scanned clean · Uploaded — '+file.name);
         if(isCitizenship) citizenshipUploaded=true;
         /* Auto-read the expiration date in the background (small inline indicator, not the modal). */
         await runExpiryAutoRead(base64,file.type,fieldId,s);
@@ -1513,7 +1527,7 @@ function stageDocForCreate(file,fieldId,s){
 function attachFileToRecord(recordId,file,fieldId,statusId){
   return new Promise((resolve)=>{
     const s=document.getElementById(statusId);
-    setDropStatus(s,'uploading','Uploading '+file.name+'…');
+    setDropStatus(s,'scanning','Scanning '+file.name+' for viruses…');
     const reader=new FileReader();
     reader.onload=async(e)=>{
       const base64=e.target.result.split(',')[1];
@@ -1525,8 +1539,8 @@ function attachFileToRecord(recordId,file,fieldId,statusId){
           body:JSON.stringify({recordId,fieldId,filename:file.name,contentType:file.type,base64}),
           signal:_ac.signal
         }).finally(()=>clearTimeout(_to));
-        if(res.ok){ setDropStatus(s,'success','Uploaded — '+file.name); if(fieldId===AT_FIELD_ATTACHMENTS) citizenshipUploaded=true; }
-        else { let t='';try{t=await res.text();}catch(_){}; setDropStatus(s,'error','Upload failed'); console.error('attach failed:',t); }
+        if(res.ok){ setDropStatus(s,'success','Scanned clean · Uploaded — '+file.name); if(fieldId===AT_FIELD_ATTACHMENTS) citizenshipUploaded=true; }
+        else { let t='';try{t=await res.text();}catch(_){}; let m='Upload failed';try{m=JSON.parse(t)?.error?.message||m;}catch(_){}; setDropStatus(s,'error',m); console.error('attach failed:',t); }
       }catch(err){ setDropStatus(s,'error','Upload error'); console.error('attach error:',err); }
       resolve();
     };
@@ -2600,6 +2614,9 @@ function renderPipeline(){
 
   const totalEl=document.getElementById('pipeline-total'), classTotalEl=document.getElementById('class-total'), classNoteEl=document.getElementById('class-note');
   if(classNoteEl)classNoteEl.classList.toggle('hidden',!(classFilter&&allStudents.length));
+  window.pipelineSelection={recordIds:rows.map(s=>s.id),classLabel:classFilter,status:statusFilter};
+  const egw=document.getElementById('email-group-wrap');
+  if(egw)egw.classList.toggle('hidden',!(classFilter&&rows.length&&adminAuthenticated));
   if(!allStudents.length){countEl.textContent='';if(totalEl)totalEl.textContent='';if(classTotalEl)classTotalEl.classList.add('hidden');out.innerHTML='<p class="text-sm text-gray-500 py-6 text-center">Loading student records…</p>';return;}
   /* Heading: how many students match the Status filter (Active by default), beside "Admissions Pipeline". */
   const statusTotal=allStudents.filter(r=>!statusFilter||statusOf(r)===statusFilter).length;
@@ -3141,7 +3158,7 @@ function checkDocExpiry(){
 }
 async function uploadCitizenshipDoc(recordId,file){
   const statusEl=document.getElementById('citizenship-upload-status');
-  if(statusEl){statusEl.textContent='Uploading document…';statusEl.className='text-xs mt-2 text-gray-400';statusEl.classList.remove('hidden');}
+  if(statusEl){statusEl.textContent='Scanning document for viruses…';statusEl.className='text-xs mt-2 text-gray-400';statusEl.classList.remove('hidden');}
   return new Promise((resolve)=>{
     const reader=new FileReader();
     reader.onload=async(e)=>{
@@ -3155,7 +3172,7 @@ async function uploadCitizenshipDoc(recordId,file){
         let responseText='';
         try{responseText=await res.text();}catch(_){}
         if(res.ok){
-          if(statusEl){statusEl.textContent='Document uploaded. (Record: '+recordId+')';statusEl.className='text-xs mt-2 text-green-400';}
+          if(statusEl){statusEl.textContent='Scanned clean — document uploaded. (Record: '+recordId+')';statusEl.className='text-xs mt-2 text-green-400';}
           console.log('Upload success — recordId:',recordId,'fieldId:',AT_FIELD_ATTACHMENTS,'response:',responseText);
         } else {
           let errDetail=responseText||res.status;
@@ -3486,6 +3503,7 @@ async function loadBaseName(){
 })();
 </script>
 <script src="email-accounts.js"></script>
+<script src="group-email.js"></script>
 <script src="staff-shell.js"></script>
 </body>
 </html>

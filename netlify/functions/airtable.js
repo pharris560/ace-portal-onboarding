@@ -12,7 +12,8 @@ const ACCOUNTS = { id: 'tblwJ9C1BQIMGMzKx', name: 'portal accounts' };
 const SERVER_ONLY = [
   { id: 'tbljFURQrugQGgZOE', name: 'email accounts' },
   { id: 'tblcHVVOwvXRAH64L', name: 'email activity' },
-  { id: 'tblJMfsctvEKNdEp8', name: 'board members' }
+  { id: 'tblJMfsctvEKNdEp8', name: 'board members' },
+  { id: 'tbl8T5oxGbAgX0bZ8', name: 'group emails' }
 ];
 /* Password hashes are never sent to a browser: sign-in is checked on the server. Admins' security
    answers are hidden too; other accounts' answers are still read by the (old) browser reset flow. */
