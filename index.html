@@ -932,6 +932,7 @@ tailwind.config = {
       <select class="neu-input text-base px-3 py-2.5 rounded-xl" id="class-filter"><option value="">All Classes</option><option>Falcons</option><option>Hawks</option><option>Sparrows</option><option>Eagles</option></select>
     </div>
     <p class="font-display text-3xl font-extrabold neon-text mb-2 hidden" id="class-total" aria-live="polite"></p>
+    <p class="text-base text-gray-500 mb-3 hidden" id="class-note">For more details, select the student's name. To send a group email, please log in to the <a href="https://staff-portal.flyace.org" target="_blank" rel="noopener" class="underline font-semibold">Staff Portal</a>.</p>
     <p class="text-sm text-gray-500 mb-3" id="student-count" aria-live="polite"></p>
     <div id="student-results" class="grid gap-3"></div>
   </div>
@@ -2597,7 +2598,8 @@ function renderPipeline(){
     return [s.name,s.parent,s.email,s.parentEmail,s.phone,s.parentPhone,s.studentId].join(' ').toLowerCase().includes(q);
   }).sort((a,b)=>a.name.localeCompare(b.name));
 
-  const totalEl=document.getElementById('pipeline-total'), classTotalEl=document.getElementById('class-total');
+  const totalEl=document.getElementById('pipeline-total'), classTotalEl=document.getElementById('class-total'), classNoteEl=document.getElementById('class-note');
+  if(classNoteEl)classNoteEl.classList.toggle('hidden',!(classFilter&&allStudents.length));
   if(!allStudents.length){countEl.textContent='';if(totalEl)totalEl.textContent='';if(classTotalEl)classTotalEl.classList.add('hidden');out.innerHTML='<p class="text-sm text-gray-500 py-6 text-center">Loading student records…</p>';return;}
   /* Heading: how many students match the Status filter (Active by default), beside "Admissions Pipeline". */
   const statusTotal=allStudents.filter(r=>!statusFilter||statusOf(r)===statusFilter).length;

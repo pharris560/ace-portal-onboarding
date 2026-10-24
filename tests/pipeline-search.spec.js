@@ -154,3 +154,18 @@ test('selecting a class shows its student count big and bold; clearing the class
   await page.selectOption('#class-filter', '');
   await expect(big).toBeHidden();
 });
+
+test('selecting a class shows the note about student details and group email (Staff Portal link); hidden otherwise', async ({ page }) => {
+  await setup(page);
+  const note = page.locator('#class-note');
+  await expect(note).toBeHidden();
+  await page.selectOption('#class-filter', 'AM Falcons');
+  await expect(note).toBeVisible();
+  await expect(note).toContainText("For more details, select the student's name.");
+  await expect(note).toContainText('To send a group email, please log in to the Staff Portal.');
+  const link = note.locator('a');
+  await expect(link).toHaveAttribute('href', 'https://staff-portal.flyace.org');
+  await expect(link).toHaveAttribute('target', '_blank');
+  await page.selectOption('#class-filter', '');
+  await expect(note).toBeHidden();
+});
