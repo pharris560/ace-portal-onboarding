@@ -135,7 +135,7 @@ test('heading shows the student total on the same line, in the same font size as
   const sizeOf = (c) => c.filter((x) => /^text-(xs|sm|base|lg|xl|\dxl)$/.test(x));
   expect(sizeOf(await cls(total))).toEqual(sizeOf(await cls(h3)));
   const a = await h3.boundingBox(), b = await total.boundingBox();
-  expect(Math.abs((a.y + a.height / 2) - (b.y + b.height / 2))).toBeLessThan(a.height); // same line
+  expect(Math.abs((a.y + a.height / 2) - (b.y + b.height / 2))).toBeLessThanOrEqual(2); // vertically centred on the heading, same line
   await page.selectOption('#status-filter', '');
   await expect(total).toHaveText('· 3 students');
 });
