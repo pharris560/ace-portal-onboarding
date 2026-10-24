@@ -125,3 +125,32 @@ test('Admissions Pipeline and Coverage Schedule cards collapse, and the choice i
   await page.locator('.collapse-btn', { hasText: 'Admissions Pipeline' }).click();
   await expect(page.locator('#student-search')).toBeVisible();
 });
+
+test('heading shows the student total on the same line, in the same font size as the heading', async ({ page }) => {
+  await setup(page);
+  const total = page.locator('#pipeline-total');
+  await expect(total).toHaveText('· 2 students'); // Status: Active (Adam is Withdrawn)
+  const h3 = page.locator('#view-dashboard h3', { hasText: 'Admissions Pipeline' });
+  const cls = async (l) => (await l.getAttribute('class')).split(/\s+/);
+  const sizeOf = (c) => c.filter((x) => /^text-(xs|sm|base|lg|xl|\dxl)$/.test(x));
+  expect(sizeOf(await cls(total))).toEqual(sizeOf(await cls(h3)));
+  const a = await h3.boundingBox(), b = await total.boundingBox();
+  expect(Math.abs((a.y + a.height / 2) - (b.y + b.height / 2))).toBeLessThan(a.height); // same line
+  await page.selectOption('#status-filter', '');
+  await expect(total).toHaveText('· 3 students');
+});
+
+test('selecting a class shows its student count big and bold; clearing the class hides it', async ({ page }) => {
+  await setup(page);
+  const big = page.locator('#class-total');
+  await expect(big).toBeHidden();
+  await page.selectOption('#class-filter', 'AM Falcons');
+  await expect(big).toBeVisible();
+  await expect(big).toHaveText('2 students in AM Falcons');
+  const c = await big.getAttribute('class');
+  expect(c).toMatch(/text-3xl/); expect(c).toMatch(/font-extrabold/);
+  await page.selectOption('#status-filter', '');
+  await expect(big).toHaveText('3 students in AM Falcons');
+  await page.selectOption('#class-filter', '');
+  await expect(big).toBeHidden();
+});

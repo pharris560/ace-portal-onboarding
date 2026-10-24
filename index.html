@@ -922,7 +922,7 @@ tailwind.config = {
     <p class="text-sm text-gray-500" id="base-note"></p>
   </div>
   <div class="neu-raised rounded-2xl p-6 mb-6">
-    <div class="flex items-center justify-between mb-4 gap-3 flex-wrap"><h3 class="font-display text-base font-bold neon-text">Admissions Pipeline</h3>
+    <div class="flex items-center justify-between mb-4 gap-3 flex-wrap"><div class="flex items-baseline gap-3 flex-wrap" style="display:flex;align-items:baseline;flex-wrap:wrap;gap:12px"><h3 class="font-display text-base font-bold neon-text">Admissions Pipeline</h3><span class="font-display text-base font-bold neon-text" id="pipeline-total" aria-live="polite"></span></div>
       <button onclick="refreshAirtableData()" class="neu-btn px-3 py-1.5 rounded-lg text-sm neon-text-subtle" id="refresh-btn" title="Reload student records from Airtable">↻ Refresh</button>
     </div>
     <p class="text-base text-gray-500 mb-4">Search student records from Airtable by student or parent name, email, phone or student ID. Select a student to see their parent / guardian and contact details.</p>
@@ -931,6 +931,7 @@ tailwind.config = {
       <select class="neu-input text-base px-3 py-2.5 rounded-xl" id="status-filter" title="Filter by Status"><option value="Active" selected>Status: Active</option><option value="">All Statuses</option></select>
       <select class="neu-input text-base px-3 py-2.5 rounded-xl" id="class-filter"><option value="">All Classes</option><option>Falcons</option><option>Hawks</option><option>Sparrows</option><option>Eagles</option></select>
     </div>
+    <p class="font-display text-3xl font-extrabold neon-text mb-2 hidden" id="class-total" aria-live="polite"></p>
     <p class="text-sm text-gray-500 mb-3" id="student-count" aria-live="polite"></p>
     <div id="student-results" class="grid gap-3"></div>
   </div>
@@ -2596,7 +2597,16 @@ function renderPipeline(){
     return [s.name,s.parent,s.email,s.parentEmail,s.phone,s.parentPhone,s.studentId].join(' ').toLowerCase().includes(q);
   }).sort((a,b)=>a.name.localeCompare(b.name));
 
-  if(!allStudents.length){countEl.textContent='';out.innerHTML='<p class="text-sm text-gray-500 py-6 text-center">Loading student records…</p>';return;}
+  const totalEl=document.getElementById('pipeline-total'), classTotalEl=document.getElementById('class-total');
+  if(!allStudents.length){countEl.textContent='';if(totalEl)totalEl.textContent='';if(classTotalEl)classTotalEl.classList.add('hidden');out.innerHTML='<p class="text-sm text-gray-500 py-6 text-center">Loading student records…</p>';return;}
+  /* Heading: how many students match the Status filter (Active by default), beside "Admissions Pipeline". */
+  const statusTotal=allStudents.filter(r=>!statusFilter||statusOf(r)===statusFilter).length;
+  if(totalEl)totalEl.textContent='· '+statusTotal+' student'+(statusTotal===1?'':'s');
+  /* Picking a class: its student count, big and bold. */
+  if(classTotalEl){
+    if(classFilter){const n=rows.length;classTotalEl.textContent=n+' student'+(n===1?'':'s')+' in '+classFilter;classTotalEl.classList.remove('hidden');}
+    else classTotalEl.classList.add('hidden');
+  }
   /* A name search OR a Class selection lists students; Status alone just shows the match count. */
   if(!q&&!classFilter){countEl.textContent=rows.length+' student'+(rows.length===1?'':'s')+' match the filters. Type a name to search, or pick a class to list its students.';out.innerHTML='';return;}
   const LIMIT=100;
