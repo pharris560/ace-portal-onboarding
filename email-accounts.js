@@ -3,7 +3,8 @@
    written with textContent, never innerHTML, so names from Airtable can't inject markup. */
 (function () {
   const API = '/.netlify/functions/email-admin';
-  const ROLE_BY_BOARD = { 'Chair': 'boardchair', 'Vice Chair': 'boardvicechair', 'Treasurer': 'boardtreasurer', 'Secretary': 'boardsecretary' };
+  const ROLE_BY_BOARD = { 'Chair': 'boardchair', 'Vice Chair': 'boardvicechair', 'Secretary': 'boardsecretary', 'Financial Chair': 'boardfinancialchair' };
+  for (let i = 1; i <= 10; i++) ROLE_BY_BOARD[`Officer ${i}`] = `boardofficer${i}`;
   let state = { accounts: [], candidates: { staff: [], board: [] }, roleKeys: {}, licensesUsed: 0, licenseLimit: 300, existingMailboxes: [] };
   let searchText = ''; /* the "find a user" box; kept across re-renders */
   let draft = [];      /* people waiting to be previewed/created */
@@ -200,7 +201,7 @@
   const TEMPLATE = [
     'first,last,personalEmail,mobile,type,role',
     'Jane,Doe,jane.doe@example.com,404-555-0123,staff,',
-    'Sam,Lee,sam.lee@example.com,404-555-0199,board,boardtreasurer',
+    'Sam,Lee,sam.lee@example.com,404-555-0199,board,boardfinancialchair',
     'Maria,Garcia-Lopez,maria.garcia@example.com,(678) 555-0142,board,',
     ''
   ].join('\r\n');
@@ -219,7 +220,7 @@
     const tpl = h('div', {}, btn('⬇ Download sample CSV template', downloadTemplate, 'neon-text'),
       h('p', { class: 'text-sm text-gray-500 mt-1' }, 'Opens in Excel, Numbers or Google Sheets. The three example rows use @example.com and are skipped automatically, so you can leave them or delete them.'));
     const box = h('div', { class: 'space-y-3' },
-      h('p', { class: 'text-base text-gray-400' }, 'Columns: first, last, personalEmail, mobile, type (staff or board), role (optional: boardchair, boardvicechair, boardtreasurer, boardsecretary). Up to 100 rows.'),
+      h('p', { class: 'text-base text-gray-400' }, 'Columns: first, last, personalEmail, mobile, type (staff or board), role (optional: boardchair, boardvicechair, boardsecretary, boardfinancialchair, boardofficer1–boardofficer10). Up to 100 rows.'),
       tpl, file, ta,
       btn('Review addresses →', () => {
         const all = parseCsv(ta.value);

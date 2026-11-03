@@ -20,7 +20,7 @@ async function stub(page, { loginOk = true, baseSource = 'airtable' } = {}) {
   await page.route('**/.netlify/functions/email-admin', async (route) => {
     const body = route.request().postDataJSON();
     calls.push({ fn: 'email-admin', auth: route.request().headers()['authorization'], body });
-    if (body.action === 'overview') return route.fulfill(j({ accounts, candidates: { staff: [], board: [{ holderId: 'recBOARD00000001', holderType: 'Board Member', first: 'Nia', last: 'Hart', personalEmail: 'nia@gmail.com', mobile: '+14045550199', boardRole: 'Secretary' }] }, roleKeys: { boardchair: 'Board Chair', boardvicechair: 'Board Vice Chair', boardtreasurer: 'Board Treasurer', boardsecretary: 'Board Secretary' }, licensesUsed: 9, licenseLimit: 300, existingMailboxes: ['acestaff@flyace.org', 'admin@flyace.org'] }));
+    if (body.action === 'overview') return route.fulfill(j({ accounts, candidates: { staff: [], board: [{ holderId: 'recBOARD00000001', holderType: 'Board Member', first: 'Nia', last: 'Hart', personalEmail: 'nia@gmail.com', mobile: '+14045550199', boardRole: 'Secretary' }] }, roleKeys: { boardchair: 'Board Chair', boardvicechair: 'Board Vice Chair', boardsecretary: 'Board Secretary', boardfinancialchair: 'Board Financial Chair', boardofficer1: 'Board Officer 1' }, licensesUsed: 9, licenseLimit: 300, existingMailboxes: ['acestaff@flyace.org', 'admin@flyace.org'] }));
     if (body.action === 'preview') return route.fulfill(j({ rows: body.people.map(p => ({ ...p, address: (p.roleKey || 'nia.hart') + '@flyace.org', kind: p.roleKey ? 'Role' : 'Personal', problems: [], notes: [] })) }));
     if (body.action === 'create') return route.fulfill(j({ results: [{ ok: true }], created: 1, skipped: 0 }));
     return route.fulfill(j({ ok: true }));
@@ -82,12 +82,12 @@ test('spreadsheet upload parses quoted CSV rows into the review step', async ({ 
   const calls = await stub(page);
   await signIn(page);
   await page.locator('#email-accounts-card button', { hasText: 'Upload spreadsheet' }).click();
-  await page.fill('#email-accounts-card textarea', 'first,last,personalEmail,mobile,type,role\n"Ann ""AJ""",Lee,aj@gmail.com,404-555-0101,staff,\nSam,Ng,sam@yahoo.com,404-555-0102,board,boardtreasurer\n');
+  await page.fill('#email-accounts-card textarea', 'first,last,personalEmail,mobile,type,role\n"Ann ""AJ""",Lee,aj@gmail.com,404-555-0101,staff,\nSam,Ng,sam@yahoo.com,404-555-0102,board,boardfinancialchair\n');
   await page.locator('#email-accounts-card button', { hasText: 'Review addresses' }).click();
   await expect(page.locator('#email-accounts-card')).toContainText('2 of 2 ready');
   const prev = calls.find(c => c.body && c.body.action === 'preview').body.people;
   expect(prev[0].first).toBe('Ann "AJ"');
-  expect(prev[1]).toMatchObject({ holderType: 'Board Member', roleKey: 'boardtreasurer' });
+  expect(prev[1]).toMatchObject({ holderType: 'Board Member', roleKey: 'boardfinancialchair' });
 });
 
 test('signing out drops the admin token', async ({ page }) => {

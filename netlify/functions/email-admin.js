@@ -7,7 +7,8 @@ const { BASE_ID, requireAdmin, airtable, json } = require('./lib/session');
 
 const T = { accounts: 'tbljFURQrugQGgZOE', activity: 'tblcHVVOwvXRAH64L', board: 'tblJMfsctvEKNdEp8', staff: 'tblylF50qyHNtKHLH' };
 const DOMAIN = 'flyace.org';
-const ROLE_KEYS = { boardchair: 'Board Chair', boardvicechair: 'Board Vice Chair', boardtreasurer: 'Board Treasurer', boardsecretary: 'Board Secretary' };
+const ROLE_KEYS = { boardchair: 'Board Chair', boardvicechair: 'Board Vice Chair', boardsecretary: 'Board Secretary', boardfinancialchair: 'Board Financial Chair' };
+for (let i = 1; i <= 10; i++) ROLE_KEYS[`boardofficer${i}`] = `Board Officer ${i}`;
 /* Mailboxes that already exist in the Microsoft tenant but are not in the Email Accounts table. */
 const EXISTING = ['acefoundation', 'acestaff', 'admin', 'geoffrey.mckenzie', 'pamela.harris', 'patrick.alexander', 'stephanie.smith'];
 const RESERVED = ['postmaster', 'abuse', 'root', 'webmaster', 'hostmaster', 'noreply', 'no-reply', 'info', 'support', 'billing', 'security'];
