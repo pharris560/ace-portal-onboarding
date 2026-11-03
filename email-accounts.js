@@ -175,7 +175,7 @@
     const box = h('div', { class: 'space-y-5' });
     const mk = (p, group) => {
       const roleSel = group === 'board' ? h('select', { class: 'neu-input px-2 py-1 rounded-lg text-sm' },
-        h('option', { value: '' }, 'Personal address'), Object.entries(state.roleKeys).map(([k, v]) => h('option', { value: k, selected: ROLE_BY_BOARD[p.boardRole] === k }, k + '@ (' + v + ')'))) : null;
+        h('option', { value: '' }, 'Personal address'), Object.entries(state.roleKeys).map(([k, v]) => h('option', { value: k, selected: ROLE_BY_BOARD[String(p.boardRole || '').trim()] === k }, k + '@ (' + v + ')'))) : null;
       const cb = h('input', { type: 'checkbox' });
       return { cb, p, roleSel, el: h('label', { class: 'flex items-center gap-3 text-base text-gray-300 py-1' }, cb, `${p.first} ${p.last}`, h('span', { class: 'text-gray-500' }, p.boardRole || ''), roleSel) };
     };
