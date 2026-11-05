@@ -254,7 +254,7 @@ test('capacity: a class slot with 2 instructors + 1 volunteer still allows a 3rd
 test('by-person view: groups signups by name, shows dates+slots, allows canceling own', async ({ page }) => {
   const date = nextSaturdayISO();
   const preSignups = [
-    { id: 'recA', fields: { 'Saturday Date': date, Slot: 'Sparrows AM', 'Person Type': 'Staff', 'Signed Up By Name': 'Alex Instructor', Staff: ['recSTAFF3'] } },
+    { id: 'recA', fields: { 'Saturday Date': date, Slot: 'Sparrows PM', 'Person Type': 'Staff', 'Signed Up By Name': 'Alex Instructor', Staff: ['recSTAFF3'] } },
   ];
 
   await stubNetwork(page, {
@@ -272,7 +272,7 @@ test('by-person view: groups signups by name, shows dates+slots, allows cancelin
   await expect(page.locator('#coverage-by-person-panel')).toBeVisible();
   await expect(page.locator('#coverage-by-date-panel')).toBeHidden();
   await expect(page.locator('#coverage-by-person')).toContainText('Alex Instructor (You)');
-  await expect(page.locator('#coverage-by-person')).toContainText('Sparrows AM');
+  await expect(page.locator('#coverage-by-person')).toContainText('Sparrows PM');
 
   await page.locator('#coverage-by-person button', { hasText: 'Cancel' }).click();
   await expect(page.locator('#coverage-by-person')).toContainText('No one has signed up', { timeout: 10000 });

@@ -1774,20 +1774,20 @@ const AT_TABLE_COVERAGE = 'tbl3DGD8ruJjlblf9';
    "CLAIM ACE Staff 9am-12pm 9/19" book Sept 12. Longest name first so "ACE Staff All Day" can never
    be shadowed by a substring match on "ACE Staff AM". */
 const STAFF_SLOTS = ['ACE Staff All Day','ACE Staff AM','ACE Staff PM'];
-const COVERAGE_SLOTS = ['Falcons AM','Falcons PM','Hawks AM','Hawks PM','Eagles AM','Sparrows AM'].concat(STAFF_SLOTS);
+const COVERAGE_SLOTS = ['Falcons AM','Falcons PM','Hawks AM','Hawks PM','Eagles AM','Sparrows PM'].concat(STAFF_SLOTS);
 /* Hours shown next to a staff slot wherever a person picks one. Not part of the slot value itself. */
 const STAFF_SLOT_HOURS = { 'ACE Staff All Day': '9am-3pm', 'ACE Staff AM': '9am-12pm', 'ACE Staff PM': '12pm-3pm' };
 /* The 6 class-specific slots cap at MAX_INSTRUCTORS_PER_CLASS Staff signups each.
    The ACE Staff slots are general, not tied to one class, so they're uncapped.
    Volunteers are never capped on any slot — the cap is an instructor-coverage limit, not a headcount limit. */
-const CLASS_SLOTS = ['Falcons AM','Falcons PM','Hawks AM','Hawks PM','Eagles AM','Sparrows AM'];
+const CLASS_SLOTS = ['Falcons AM','Falcons PM','Hawks AM','Hawks PM','Eagles AM','Sparrows PM'];
 const MAX_INSTRUCTORS_PER_CLASS = 3;
 /* One-AM + one-PM-per-day cap for Staff only (2026-09-18, Pam's rule) — Volunteers are unrestricted,
    same as the instructor-count cap above. 'ACE Staff All Day' spans both halves of the day, so it
    occupies BOTH the morning and afternoon slot for that person: they can't hold it alongside anything
    else that Saturday, and can't add it if they already hold an AM or PM slot that day. */
-const AM_SLOTS = ['Falcons AM','Hawks AM','Eagles AM','Sparrows AM','ACE Staff AM'];
-const PM_SLOTS = ['Falcons PM','Hawks PM','ACE Staff PM'];
+const AM_SLOTS = ['Falcons AM','Hawks AM','Eagles AM','ACE Staff AM'];
+const PM_SLOTS = ['Falcons PM','Hawks PM','Sparrows PM','ACE Staff PM'];
 function halfOfDay(slot){
   if(slot === 'ACE Staff All Day') return 'both';
   if(AM_SLOTS.indexOf(slot) !== -1) return 'am';
