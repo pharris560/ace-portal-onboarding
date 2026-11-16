@@ -681,6 +681,13 @@ tailwind.config = {
         <div><label class="block text-xs font-medium text-gray-400 mb-1.5 tracking-wide uppercase">Email</label><input type="email" id="edit-p2-email" class="neu-input w-full px-4 py-3 rounded-xl text-sm"></div>
       </div>
       <div class="neon-line my-6"></div>
+      <h5 class="font-display text-lg font-semibold text-white mb-1">Text Message Updates</h5>
+      <p class="text-xs text-gray-500 mb-3">Optional &mdash; get class cancellations and schedule changes by text.</p>
+      <label id="sms-consent-row" class="flex items-start gap-3 neu-inset rounded-xl p-4 cursor-pointer">
+        <input type="checkbox" id="edit-sms-consent" class="accent-[#00b4ff] mt-0.5 flex-shrink-0">
+        <span class="text-xs text-gray-400 leading-relaxed">I agree to receive SMS text messages from ACE (Aviation Career Enrichment) at the parent/guardian phone number(s) provided above, about class schedules, cancellations, weather delays, events and program announcements. I confirm I am authorized to give this consent. Message frequency varies. Msg &amp; data rates may apply. Reply STOP to opt out, HELP for help. Consent is not a condition of enrollment. See our <a href="https://www.flyace.org/privacy-policy" target="_blank" rel="noopener" class="neon-text-subtle underline">Privacy Policy</a> and <a href="https://www.flyace.org/terms-conditions" target="_blank" rel="noopener" class="neon-text-subtle underline">Terms &amp; Conditions</a>.</span>
+      </label>
+      <div class="neon-line my-6"></div>
       <h5 class="font-display text-lg font-semibold text-white mb-1">Attendance Preference <span class="text-red-400">*</span></h5>
       <p class="text-xs text-gray-500 mb-4">Select one session &mdash; AM or PM (required)</p>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -2999,6 +3006,7 @@ function showUpdateForm(createMode){
   set('edit-p2-last',ff['Secondary Parent Last Name']||'');
   set('edit-p2-phone',ff['Secondary Parent Phone']||'');
   set('edit-p2-email',ff['Secondary Parent Email']||'');
+  { var _sc=document.getElementById('edit-sms-consent'); if(_sc) _sc.checked=(ff['Parent SMS Opt-In']===true); }
   const attendance=(ff['Attendance']||[]).map(a=>a.name||a);
   document.getElementById('edit-attend-am').checked=attendance.includes('AM Session 9am-11:30am');
   document.getElementById('edit-attend-pm').checked=attendance.includes('PM Session 12:30pm-3pm');
@@ -3076,6 +3084,12 @@ function addAnotherChild(){
   var clean={};
   Object.keys(carry).forEach(function(k){ var v=carry[k]||src[k]; if(v!=null&&v!=='') clean[k]=v; });
   if(!clean['Primary Parent Email'] && loggedInUser && loggedInUser.email) clean['Primary Parent Email']=loggedInUser.email;
+  /* Same parent, same phone: carry their text-message consent (and its original date) to the sibling's record. */
+  { var _sbox=document.getElementById('edit-sms-consent');
+    if((_sbox&&_sbox.checked)||src['Parent SMS Opt-In']===true){
+      clean['Parent SMS Opt-In']=true;
+      var _sd=src['Parent SMS Opt-In Date']; if(_sd) clean['Parent SMS Opt-In Date']=_sd;
+    } }
   currentLookupRecordId=null;      /* force CREATE — new sibling record */
   currentLookupFields=clean;       /* only contact/home info prefilled; student fields blank */
   showView('lookup');
@@ -3125,6 +3139,7 @@ function downloadFormCopy(){
     ['Secondary Parent Phone',g('edit-p2-phone')||'—'],
     ['Secondary Parent Email',g('edit-p2-email')||'—'],
     ['Attendance Preference',attend.join(', ')||'—'],
+    ['Text-Message Consent',(document.getElementById('edit-sms-consent')?.checked)?'Yes — agreed to receive SMS from ACE':'No'],
   ];
   const rowsHtml=rows.map(([l,v])=>`<tr><td style="padding:8px 12px;color:#555;font-size:12px;text-transform:uppercase;letter-spacing:.05em;width:200px;border-bottom:1px solid #eee">${l}</td><td style="padding:8px 12px;font-size:14px;font-weight:600;color:#111;border-bottom:1px solid #eee">${v}</td></tr>`).join('');
   const html=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>ACE Student Record — ${name.trim()}</title>
@@ -3243,6 +3258,18 @@ async function saveStudentUpdate(){
   if(g('edit-p2-last')) fields['Secondary Parent Last Name']=g('edit-p2-last').trim();
   if(g('edit-p2-phone')) fields['Secondary Parent Phone']=g('edit-p2-phone').trim();
   if(g('edit-p2-email')) fields['Secondary Parent Email']=g('edit-p2-email').trim();
+  /* Text-message consent (optional). The date is only stamped when consent is first given, never
+     overwritten on later edits; unchecking a previously given consent records the withdrawal. */
+  { const _box=document.getElementById('edit-sms-consent');
+    const _prev=(currentLookupFields||{})['Parent SMS Opt-In']===true;
+    if(_box&&_box.checked){
+      if(!currentLookupRecordId||!_prev){
+        fields['Parent SMS Opt-In']=true;
+        fields['Parent SMS Opt-In Date']=(_prev&&(currentLookupFields||{})['Parent SMS Opt-In Date'])||new Date().toISOString();
+      }
+    } else if(_box&&_prev&&currentLookupRecordId){
+      fields['Parent SMS Opt-In']=false;
+    } }
   const attend=[];
   if(document.getElementById('edit-attend-am').checked)attend.push('AM Session 9am-11:30am');
   if(document.getElementById('edit-attend-pm').checked)attend.push('PM Session 12:30pm-3pm');
@@ -3311,6 +3338,9 @@ async function saveStudentUpdate(){
   /* Upload any files staged during the create flow, now that the record exists. */
   if(enrollRes&&enrollRes.id){
     currentLookupRecordId=enrollRes.id;
+    /* Remember what was just saved about text consent, so "Add Another Child" carries the same value and date. */
+    currentLookupFields=currentLookupFields||{};
+    ['Parent SMS Opt-In','Parent SMS Opt-In Date'].forEach(function(k){ if(k in fields) currentLookupFields[k]=fields[k]; });
     if(pendingCitizenshipFile){ btn.textContent='Uploading document…';btn.disabled=true; await attachFileToRecord(enrollRes.id,pendingCitizenshipFile,AT_FIELD_ATTACHMENTS,'status-lookup-citizenship'); pendingCitizenshipFile=null; }
     if(pendingMedicalFile){ btn.textContent='Uploading document…';btn.disabled=true; await attachFileToRecord(enrollRes.id,pendingMedicalFile,AT_FIELD_MEDICAL,'status-lookup-medical'); pendingMedicalFile=null; }
   }
