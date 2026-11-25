@@ -13,7 +13,7 @@ function nextSaturdayISO() {
   return d.toISOString().slice(0, 10);
 }
 
-async function stubNetwork(page, { staffRecord = null, volunteerRecord = null, signups: initialSignups = [] } = {}) {
+async function stubNetwork(page, { staffRecord = null, volunteerRecord = null, signups: initialSignups = [], noClassDates = [] } = {}) {
   const jsonBody = (o) => ({ status: 200, contentType: 'application/json', body: JSON.stringify(o) });
   let signups = initialSignups.slice(); // in-memory Coverage Signups, mutated by POST/DELETE
   let nextId = 1;
@@ -28,6 +28,9 @@ async function stubNetwork(page, { staffRecord = null, volunteerRecord = null, s
     }
     if (path.includes(AT_TABLE_VOLUNTEERS) && method === 'GET') {
       return route.fulfill(jsonBody({ records: volunteerRecord ? [volunteerRecord] : [] }));
+    }
+    if (path.includes('tblJLoJfjScg41Fru') && method === 'GET') {
+      return route.fulfill(jsonBody({ records: noClassDates.map((d, i) => ({ id: 'recNOCLASS' + i, fields: { 'No-Class Date': d, Reason: 'Thanksgiving weekend holiday' } })) }));
     }
     if (path.includes(AT_TABLE_COVERAGE)) {
       if (method === 'GET') return route.fulfill(jsonBody({ records: signups }));
@@ -550,4 +553,32 @@ test('bulk sign-up: unticking everything disables the submit button again', asyn
   await box.uncheck();
   await expect(btn).toBeDisabled();
   await expect(btn).toHaveText('Select dates above to sign up');
+});
+
+test('no-class date: the Saturday shows "No class" with no sign-up buttons; later Saturdays are unchanged', async ({ page }) => {
+  const errors = [];
+  page.on('pageerror', (e) => { if (!/tailwind is not defined/.test(String(e))) errors.push(String(e)); });
+
+  await stubNetwork(page, {
+    staffRecord: { id: 'recSTAFF1', fields: { 'Full Name': 'Taylor Morgan', Email: 'taylor@example.com', Status: 'Active' } },
+    noClassDates: [nextSaturdayISO()],
+  });
+  await page.goto('/index.html');
+
+  await page.locator('#view-home button', { hasText: 'View My Schedule' }).click();
+  await page.locator('#view-coverage-role button', { hasText: "I'm on Staff" }).click();
+  await page.fill('#coverage-lookup-email', 'taylor@example.com');
+  await page.click('#coverage-lookup-btn');
+  await expect(page.locator('#view-coverage')).toBeVisible();
+
+  const firstCard = page.locator('#coverage-schedule > div').first();
+  await expect(firstCard).toContainText('No class');
+  await expect(firstCard).toContainText('Thanksgiving weekend holiday');
+  await expect(firstCard.locator('button', { hasText: 'Sign Up' })).toHaveCount(0);
+
+  // The following Saturday is a normal card with Sign Up buttons.
+  const secondCard = page.locator('#coverage-schedule > div').nth(1);
+  await expect(secondCard.locator('button', { hasText: 'Sign Up' }).first()).toBeVisible();
+
+  expect(errors, 'no uncaught page errors').toEqual([]);
 });

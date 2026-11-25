@@ -1775,6 +1775,25 @@ async function submitVolunteerApplication(){
 
 /* ===== Saturday Coverage Schedule (self-service sign-up + viewable calendar) ===== */
 const AT_TABLE_COVERAGE = 'tbl3DGD8ruJjlblf9';
+/* Saturdays with no class (holidays/breaks), maintained by staff in the 'No-Class Dates' Airtable table
+   (2026-11-25). Those dates stay on the calendar but show "No class" and cannot be signed up for. */
+const AT_TABLE_NOCLASS = 'tblJLoJfjScg41Fru';
+let noClassDates = {}; /* 'YYYY-MM-DD' -> reason text */
+async function loadNoClassDates(){
+  /* Fails open: if the lookup errors, the calendar behaves exactly as before. */
+  const res = await atFetch('/' + AT_BASE_ID + '/' + AT_TABLE_NOCLASS + '?pageSize=100');
+  const map = {};
+  if(res && Array.isArray(res.records)){
+    res.records.forEach(r => {
+      const d = r.fields && r.fields['No-Class Date'];
+      if(d) map[String(d).slice(0,10)] = (r.fields['Reason'] || 'Holiday');
+    });
+  }
+  noClassDates = map;
+}
+function noClassMessage(date){
+  return 'No class on this Saturday (' + (noClassDates[date] || 'holiday') + '). No one needs to sign up.';
+}
 /* Staff who aren't instructing pick a time of day rather than a class (2026-09-05). AM/PM mirror
    the class naming deliberately: names must stay digit-free, because the CLAIM reply parser strips
    letters and reads the remaining digits as the date — a slot literally named "9am-12pm" makes
@@ -1909,6 +1928,15 @@ async function lookupCoverageUser(){
    and the By Class view (one card per slot, rows = Saturdays) -- same slot/date pairing,
    just grouped in the opposite order, so the row itself is identical either way. */
 function renderCoverageRow(date, slot, people, opts){
+  if(noClassDates[date]){
+    return { html:
+      '<div class="py-3 border-b border-white/5 last:border-0">'
+        + '<div class="flex items-center justify-between gap-3">'
+          + '<div class="flex items-center"><p class="text-base font-medium text-white"></p></div>'
+          + '<span class="px-3 py-1.5 rounded-lg text-sm text-gray-500 border border-white/5 shrink-0">No class</span>'
+        + '</div></div>',
+      isClassSlot: CLASS_SLOTS.indexOf(slot) !== -1, instructorCount: 0, slotStatusDot: '' };
+  }
   const isClassSlot = CLASS_SLOTS.indexOf(slot) !== -1;
   const instructorCount = people.filter(p => p.type === 'Staff').length;
   const volunteerCount = people.length - instructorCount;
@@ -1989,6 +2017,7 @@ async function bulkSignUp(slot, key){
   const card = bar && bar.closest('[data-slot-card]');
   if(!card) return;
   let dates = Array.from(card.querySelectorAll('.coverage-bulk-check:checked')).map(c => c.dataset.date);
+  dates = dates.filter(d => !noClassDates[d]);
   if(!dates.length) return;
 
   const dayConflicts = [];
@@ -2059,6 +2088,7 @@ async function loadCoverageSchedule(){
   const container = document.getElementById('coverage-schedule');
   container.innerHTML = '<p class="text-sm text-gray-500 text-center py-8">Loading schedule...</p>';
 
+  await loadNoClassDates();
   const dates = getUpcomingSaturdays(6);
   const dateFormula = 'OR(' + dates.map(d => 'DATESTR({Saturday Date})="' + d + '"').join(',') + ')';
   const res = await atFetch('/' + AT_BASE_ID + '/' + AT_TABLE_COVERAGE + '?filterByFormula=' + encodeURIComponent(dateFormula) + '&pageSize=100');
@@ -2091,6 +2121,16 @@ async function loadCoverageSchedule(){
     const isNext = dateIdx === 0;
     let openSlotCount = 0;
 
+    if(noClassDates[d]){
+      return '<div class="neu-raised rounded-2xl p-5 mb-4" style="border:1px solid rgba(201,162,39,0.35)">'
+        + '<div class="flex items-center justify-between mb-1">'
+          + '<h4 class="font-display text-base font-bold neon-text-subtle flex items-center">' + escapeHtml(dateLabel)
+          + '<span class="text-xs font-semibold px-2 py-0.5 rounded-full neu-inset text-yellow-400 uppercase tracking-wider ml-2">No class</span></h4>'
+        + '</div>'
+        + '<p class="text-sm text-gray-400">' + escapeHtml(noClassDates[d]) + '. No one needs to sign up for this Saturday.</p>'
+        + '</div>';
+    }
+
     const rows = COVERAGE_SLOTS.map(slot => {
       const people = byDate[d][slot];
       const isClassSlot = CLASS_SLOTS.indexOf(slot) !== -1;
@@ -2120,6 +2160,7 @@ async function loadCoverageByClass(){
   const container = document.getElementById('coverage-by-class');
   container.innerHTML = '<p class="text-sm text-gray-500 text-center py-8">Loading schedule...</p>';
 
+  await loadNoClassDates();
   const dates = getUpcomingSaturdays(6);
   const dateFormula = 'OR(' + dates.map(d => 'DATESTR({Saturday Date})="' + d + '"').join(',') + ')';
   const res = await atFetch('/' + AT_BASE_ID + '/' + AT_TABLE_COVERAGE + '?filterByFormula=' + encodeURIComponent(dateFormula) + '&pageSize=100');
@@ -2180,6 +2221,7 @@ async function loadCoverageByClass(){
 
 async function signUpForSlot(date, slot){
   if(!coverageUser) return;
+  if(noClassDates[date]){ showToast(noClassMessage(date), 'error'); return; }
 
   /* Defense in depth: the button should already be hidden/disabled once a class slot's
      instructor cap is reached, but re-check against the last-fetched data before writing,
@@ -2281,6 +2323,7 @@ async function loadCoverageByPerson(){
   const container = document.getElementById('coverage-by-person');
   container.innerHTML = '<p class="text-sm text-gray-500 text-center py-8">Loading schedule...</p>';
 
+  await loadNoClassDates();
   const dates = getUpcomingSaturdays(6);
   const dateFormula = 'OR(' + dates.map(d => 'DATESTR({Saturday Date})="' + d + '"').join(',') + ')';
   const res = await atFetch('/' + AT_BASE_ID + '/' + AT_TABLE_COVERAGE + '?filterByFormula=' + encodeURIComponent(dateFormula) + '&pageSize=100');
@@ -2365,6 +2408,7 @@ async function loadAdminCoverageSchedule(){
   ];
   adminActivePeople.sort((a, b) => a.name.localeCompare(b.name));
 
+  await loadNoClassDates();
   const dates = getUpcomingSaturdays(6);
   const dateFormula = 'OR(' + dates.map(d => 'DATESTR({Saturday Date})="' + d + '"').join(',') + ')';
   const res = await atFetch('/' + AT_BASE_ID + '/' + AT_TABLE_COVERAGE + '?filterByFormula=' + encodeURIComponent(dateFormula) + '&pageSize=100');
